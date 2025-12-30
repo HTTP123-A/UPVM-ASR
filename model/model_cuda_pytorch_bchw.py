@@ -1,0 +1,1412 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from collections import OrderedDict
+from copy import deepcopy
+from timm.models.layers import trunc_normal_
+from fvcore.nn import flop_count, parameter_count
+from torchinfo import summary
+
+from base import BaseModel
+from .vmamba import (VSSBlock,
+                     VSSBlock_PVM,
+                     VSSBlock_Downstream,                     
+                     VSSBlock_Downstream_PVM,
+                     selective_scan_flop_jit)
+from utils.stft import wav2spectro, spectro2wav
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+# 1. Wrap LayerNorm
+class LayerNorm2d(nn.LayerNorm):
+    """
+    LayerNorm2d is a wrapper for LayerNorm to support 2D input.
+    """
+
+    def forward(self, x: torch.Tensor):
+        x = x.permute(0, 2, 3, 1)
+        x = nn.functional.layer_norm(
+            x, self.normalized_shape, self.weight, self.bias, self.eps
+        )
+        x = x.permute(0, 3, 1, 2)
+        return x
+
+# 2. Wrap Permute
+class Permute(nn.Module):
+    """
+    Wrapper for torch.permute. Used in nn.Sequential.
+    """
+
+    def __init__(self, *args):
+        super().__init__()
+        self.args = args
+
+    def forward(self, x: torch.Tensor):
+        return x.permute(*self.args)
+
+# 3. PatchMerging
+class PatchMerging2D(nn.Module):
+    """input: (B, C, H, W) -> output: (B, 4*C, H/2, W/2)"""
+    def __init__(self, dim, out_dim=-1, norm_layer=nn.LayerNorm, **kwargs):
+        super().__init__()
+        self.dim = dim
+        self.out_dim = out_dim
+        self.reduction = nn.Conv2d(in_channels=4 * dim, out_channels=(2 * dim) if out_dim < 0 else out_dim, kernel_size=1, bias=False)
+        self.norm = norm_layer(4 * dim)
+    
+    @staticmethod
+    def _patch_merging_pad_bchw(x: torch.Tensor):        
+        H, W = x.shape[-2:]
+        x0 = x[..., 0::2, 0::2]  # ... H/2 W/2 C
+        x1 = x[..., 1::2, 0::2]  # ... H/2 W/2 C
+        x2 = x[..., 0::2, 1::2]  # ... H/2 W/2 C
+        x3 = x[..., 1::2, 1::2]  # ... H/2 W/2 C
+        x = torch.cat([x0, x1, x2, x3], 1)  # ... H/2 W/2 4*C    
+        return x
+    
+
+    def forward(self, x):
+        x = self._patch_merging_pad_bchw(x)                
+        x = self.norm(x) # LayerNorm2d already     
+        x = self.reduction(x)
+        return x
+
+class PatchExpanding(nn.Module):
+    """input: (B, C, H, W) -> output: (B, C/2, 2H, 2W)"""
+    def __init__(self, dim, dim_scale=2, norm_layer=LayerNorm2d):
+        super().__init__()         
+        self.expand = (nn.Conv2d(in_channels=dim,out_channels=(2 * dim), kernel_size=1, bias=False) if dim_scale == 2 else nn.Identity())
+        if norm_layer is not None:
+            self.norm = norm_layer(dim // dim_scale)
+        else:
+            self.norm = nn.Identity()        
+
+    def forward(self, x):        
+        x = self.expand(x)        
+        x = F.pixel_shuffle(x, upscale_factor=2)  # (B, (2*dim)/4=dim/2, 2H, 2W) 
+        x = self.norm(x) # LayerNorm2d already 
+
+        return x
+
+class MambaUNet(BaseModel):
+    """
+    Mamba-based U-Net model. Inherits from BaseModel and VSSM.
+    """
+
+    def __init__(
+        self,
+        patch_size=4,
+        in_chans=1,
+        depths=[2, 2, 2, 2],
+        dims=[96, 192, 384, 768],
+        # ==============================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer="silu",
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # =========================
+        mlp_ratio=4.0,
+        mlp_act_layer="gelu",
+        mlp_drop_rate=0.0,
+        gmlp=False,
+        # =========================
+        drop_path_rate=0.1,
+        patch_norm=True,
+        norm_layer="LN",  # "BN", "LN2D"
+        patchembed_version: str = "v2",  # "v1", "v2"
+        downsample_version: str = "v1",  # "v1", "v2", "v3"
+        upsample_version: str = "v1",  # "v1"
+        output_version: str = "v2",  # "v1", "v2", "v3"
+        concat_skip=False,
+        # =================
+        # FFT related parameters
+        n_fft=512,
+        hop_length=64,
+        win_length=256,
+        spectro_scale="log2",
+        # =================
+        low_freq_replacement=False,
+        **kwargs,
+    ):
+        # Initialize the BaseModel and VSSM
+        super().__init__()
+        # Default norm layer is LayerNorm, can be changed to BatchNorm or LayerNorm2D
+        self.channel_first = norm_layer.lower() in ["bn", "ln2d"]
+        
+        print(f"MODEL TYPE: CUDA/PYTORCH MIX MODEL with CHANNEL FIRST (channel_first = {self.channel_first})!")
+        print(f"MODE: [B, C, H, W]")
+        
+        self.num_layers = len(depths)
+        self.depths = depths
+        if isinstance(dims, int):
+            # If dims is an integer, use it as the base dimension for all layers
+            # and scale it by 2^i for the i-th layer
+            dims = [int(dims * 2**i_layer) for i_layer in range(self.num_layers)]
+        self.num_features = dims[-1]
+        self.dims = dims
+        self.dpr = [
+            x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))
+        ]  # stochastic depth decay rule (dpr = drop path rate)
+        self.concat_skip = concat_skip
+        # STFT parameters
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+        self.win_length = win_length
+        self.spectro_scale = spectro_scale
+        self.low_freq_replacement = low_freq_replacement
+
+        _NORMLAYERS = dict(
+            ln=nn.LayerNorm,
+            ln2d=LayerNorm2d,
+            bn=nn.BatchNorm2d,
+        )
+
+        _ACTLAYERS = dict(
+            silu=nn.SiLU,
+            gelu=nn.GELU,
+            relu=nn.ReLU,
+            sigmoid=nn.Sigmoid,
+        )
+
+        # norm_layer originally is a string, we use it to get the layer as a class
+        norm_layer: nn.Module = _NORMLAYERS.get(norm_layer.lower(), None)
+        ssm_act_layer: nn.Module = _ACTLAYERS.get(ssm_act_layer.lower(), None)
+        mlp_act_layer: nn.Module = _ACTLAYERS.get(mlp_act_layer.lower(), None)
+
+        print(f"{bcolors.HEADER}NORM LAYER: {norm_layer}{bcolors.ENDC}")
+        print(f"{bcolors.HEADER}SSM ACTIVATION FUNCTION: {ssm_act_layer}{bcolors.ENDC}")
+        print(f"{bcolors.HEADER}MLP ACTIVATION FUNCTION: {mlp_act_layer}{bcolors.ENDC}")
+
+        # Select the patch embedding module
+        print(f"{bcolors.HEADER}Patchembed VERSION: {patchembed_version}{bcolors.ENDC}")
+        _make_patch_embed = dict(
+            v1=self._make_patch_embed_v1,
+            v2=self._make_patch_embed_v2,
+        ).get(patchembed_version, None)
+
+
+        print(f"{bcolors.HEADER}Output VERSION: {output_version}{bcolors.ENDC}")
+        # _make_output_layer = dict(
+        #     v1=self._make_output_layer_v1,
+        #     v2=self._make_output_layer_v2,
+        #     v3=self._make_output_layer_v3,
+        # ).get(output_version, None)
+        _make_output_layer = self._make_output_layer_v3
+
+        # Pass parameters to chosen patch embed
+        self.patch_embed = _make_patch_embed(
+            in_chans,
+            dims[0],
+            patch_size,
+            patch_norm,
+            norm_layer,
+            channel_first=self.channel_first,
+        )
+
+        # print(f"patchembed_version: {patchembed_version} -> {_make_patch_embed}")
+
+        # Get the downsample version
+        _make_downsample = dict(
+            v1=PatchMerging2D,
+        ).get(downsample_version, None)
+
+        # print(f"downsample_version: {downsample_version} -> {_make_downsample}")
+
+        # Get the upsample version
+        _make_upsample = dict(
+            v1=PatchExpanding,
+        ).get(upsample_version, None)
+
+        self.layers_encoder = nn.ModuleList()
+        self.layers_latent = nn.ModuleList()
+        self.layers_decoder = nn.ModuleList()
+        # self.num_layers is "stage" in the VMamba paper
+
+        # Encoders
+        ENC_DEPTH_LAYER_INDEX = 4
+        ENC_REDUCE_FACTOR_LIST = [16, 16, 16, 16]
+        ENC_MLP_RATIO_LIST = [1.0, 1.0, 1.0, 1.0]    
+        for i_layer in range(self.num_layers):
+            print(f"I LAYER {i_layer}")
+            if i_layer < ENC_DEPTH_LAYER_INDEX:
+                self.layers_encoder.append(
+                    self.VSSLayer_Downstream_PVM(
+                        dim=self.dims[i_layer],                        
+                        drop_path=[self.dpr[sum(self.depths[:i_layer])]],
+                        norm_layer=norm_layer,
+                        channel_first=self.channel_first,
+                        concat_skip=False,
+                        # =================
+                        ssm_d_state=ssm_d_state,
+                        ssm_ratio=ssm_ratio,
+                        ssm_dt_rank=ssm_dt_rank,
+                        ssm_act_layer=ssm_act_layer,
+                        ssm_conv=ssm_conv,
+                        ssm_conv_bias=ssm_conv_bias,
+                        ssm_drop_rate=ssm_drop_rate,
+                        ssm_init=ssm_init,
+                        forward_type=forward_type,
+                        # =================
+                        # mlp_ratio=mlp_ratio,
+                        mlp_ratio=ENC_MLP_RATIO_LIST[i_layer],
+                        mlp_act_layer=mlp_act_layer,
+                        mlp_drop_rate=mlp_drop_rate,
+                        last_layer = (True if (i_layer == self.num_layers - 1) else False),
+                        # =================
+                        reduce_factor=ENC_REDUCE_FACTOR_LIST[i_layer],
+                        # =================
+                    )
+                )
+            else:
+                self.layers_encoder.append(
+                    self.VSSLayer_Downstream_PVM(
+                        dim=self.dims[i_layer],
+                        drop_path=self.dpr[
+                            sum(self.depths[:i_layer]) : sum(self.depths[: i_layer + 1])
+                        ],
+                        norm_layer=norm_layer,
+                        channel_first=self.channel_first,
+                        concat_skip=False,
+                        # =================
+                        ssm_d_state=ssm_d_state,
+                        ssm_ratio=ssm_ratio,
+                        ssm_dt_rank=ssm_dt_rank,
+                        ssm_act_layer=ssm_act_layer,
+                        ssm_conv=ssm_conv,
+                        ssm_conv_bias=ssm_conv_bias,
+                        ssm_drop_rate=ssm_drop_rate,
+                        ssm_init=ssm_init,
+                        forward_type=forward_type,
+                        # =================
+                        # mlp_ratio=mlp_ratio,
+                        mlp_ratio=ENC_MLP_RATIO_LIST[i_layer],
+                        mlp_act_layer=mlp_act_layer,
+                        mlp_drop_rate=mlp_drop_rate,
+                        last_layer = (True if (i_layer == self.num_layers - 1) else False),
+                        # =================
+                        reduce_factor=ENC_REDUCE_FACTOR_LIST[i_layer],
+                        # =================
+                    )
+                )
+        
+        # Latent layer
+        if len(self.dims) == 5:
+            self.layers_latent.append(
+                self.VSSLayer(
+                    dim=(
+                        self.dims[self.num_layers]
+                        if len(self.dims) == 5
+                        else self.dims[self.num_layers - 1]
+                    ),
+                    drop_path=self.dpr[
+                        sum(self.depths[: self.num_layers - 1]) : sum(
+                            self.depths[: self.num_layers]
+                        )
+                    ],
+                    norm_layer=norm_layer,
+                    sampler=nn.Identity(),
+                    channel_first=self.channel_first,
+                    concat_skip=False,
+                    # =================
+                    ssm_d_state=ssm_d_state,
+                    ssm_ratio=ssm_ratio,
+                    ssm_dt_rank=ssm_dt_rank,
+                    ssm_act_layer=ssm_act_layer,
+                    ssm_conv=ssm_conv,
+                    ssm_conv_bias=ssm_conv_bias,
+                    ssm_drop_rate=ssm_drop_rate,
+                    ssm_init=ssm_init,
+                    forward_type=forward_type,
+                    # =================
+                    mlp_ratio=mlp_ratio,
+                    mlp_act_layer=mlp_act_layer,
+                    mlp_drop_rate=mlp_drop_rate,
+                    gmlp=gmlp,
+                )
+            )
+        # Decoders        
+        DEC_DEPTH_LAYER_INDEX_MIN = 0
+        DEC_DEPTH_LAYER_INDEX_MAX = 4
+        DEC_REDUCE_FACTOR_LIST = [8, 8, 8, 8, 8]
+        DEC_MLP_RATIO_LIST = [1.0, 1.0, 1.0, 1.0, 1.0]
+        for i_layer in range(self.num_layers, 0, -1):
+            print(f"DECODE I_LAYER: {i_layer}")
+            if len(self.dims) == 5:
+                upsample = _make_upsample(
+                    self.dims[i_layer],
+                    dim_scale=2,
+                    norm_layer=norm_layer,
+                )
+            else:
+                upsample = (
+                    _make_upsample(
+                        self.dims[i_layer],
+                        dim_scale=2,
+                        norm_layer=norm_layer,
+                    )
+                    if i_layer < self.num_layers
+                    else nn.Identity()
+                )
+
+            if i_layer > DEC_DEPTH_LAYER_INDEX_MIN and i_layer < DEC_DEPTH_LAYER_INDEX_MAX:
+                self.layers_decoder.append(
+                    self.VSSLayer_PVM(
+                        dim=(
+                            self.dims[i_layer]
+                            if len(self.dims) == 5
+                            else (
+                                self.dims[i_layer]
+                                if i_layer < self.num_layers - 1
+                                else self.dims[self.num_layers - 1]
+                            )
+                        ),
+                        drop_path=[self.dpr[sum(self.depths[:i_layer])]],                        
+                        norm_layer=norm_layer,
+                        sampler=upsample,
+                        channel_first=self.channel_first,
+                        concat_skip=(
+                            self.concat_skip
+                            if len(self.dims) == 5
+                            else (self.concat_skip if i_layer < self.num_layers else False)
+                        ),
+                        # =================
+                        ssm_d_state=ssm_d_state,
+                        ssm_ratio=ssm_ratio,
+                        ssm_dt_rank=ssm_dt_rank,
+                        ssm_act_layer=ssm_act_layer,
+                        ssm_conv=ssm_conv,
+                        ssm_conv_bias=ssm_conv_bias,
+                        ssm_drop_rate=ssm_drop_rate,
+                        ssm_init=ssm_init,
+                        forward_type=forward_type,
+                        # =================
+                        mlp_ratio=DEC_MLP_RATIO_LIST[i_layer],
+                        mlp_act_layer=mlp_act_layer,
+                        mlp_drop_rate=mlp_drop_rate,
+                        gmlp=gmlp,
+                        # =================
+                        reduce_factor=DEC_REDUCE_FACTOR_LIST[i_layer],
+                        # =================
+                    )
+                )
+            else:
+                self.layers_decoder.append(
+                    self.VSSLayer_PVM(
+                        dim=(
+                            self.dims[i_layer]
+                            if len(self.dims) == 5
+                            else (
+                                self.dims[i_layer]
+                                if i_layer < self.num_layers - 1
+                                else self.dims[self.num_layers - 1]
+                            )
+                        ),
+                        drop_path=self.dpr[
+                            sum(self.depths[:i_layer]) : sum(self.depths[: i_layer + 1])
+                        ],
+                        norm_layer=norm_layer,
+                        sampler=upsample,
+                        channel_first=self.channel_first,
+                        concat_skip=(
+                            self.concat_skip
+                            if len(self.dims) == 5
+                            else (self.concat_skip if i_layer < self.num_layers else False)
+                        ),
+                        # =================
+                        ssm_d_state=ssm_d_state,
+                        ssm_ratio=ssm_ratio,
+                        ssm_dt_rank=ssm_dt_rank,
+                        ssm_act_layer=ssm_act_layer,
+                        ssm_conv=ssm_conv,
+                        ssm_conv_bias=ssm_conv_bias,
+                        ssm_drop_rate=ssm_drop_rate,
+                        ssm_init=ssm_init,
+                        forward_type=forward_type,
+                        # =================
+                        mlp_ratio=DEC_MLP_RATIO_LIST[i_layer],
+                        mlp_act_layer=mlp_act_layer,
+                        mlp_drop_rate=mlp_drop_rate,
+                        gmlp=gmlp,
+                        # =================
+                        reduce_factor=DEC_REDUCE_FACTOR_LIST[i_layer],
+                        # =================
+                    )
+                )
+
+        self.output_layer = _make_output_layer(
+            in_chans=in_chans,
+            dim=dims[0],
+            norm_layer=norm_layer,
+            sampler=_make_upsample,
+            concat_skip=self.concat_skip,
+            channel_first=True,
+            # =================
+            ssm_d_state=ssm_d_state,
+            ssm_ratio=ssm_ratio,
+            ssm_dt_rank=ssm_dt_rank,
+            ssm_act_layer=ssm_act_layer,
+            ssm_conv=ssm_conv,
+            ssm_conv_bias=ssm_conv_bias,
+            ssm_drop_rate=ssm_drop_rate,
+            ssm_init=ssm_init,
+            forward_type=forward_type,
+            # =================
+            mlp_ratio=mlp_ratio,
+            mlp_act_layer=mlp_act_layer,
+            mlp_drop_rate=mlp_drop_rate,
+            gmlp=gmlp,
+        )
+
+        self.apply(self._init_weights)
+
+    def _mag_phase(self, x):        
+        mag, phase = wav2spectro(
+            x,
+            self.n_fft,
+            self.hop_length,
+            self.win_length,
+            self.spectro_scale,
+        )
+        return mag, phase
+
+    def _i_mag_phase(self, mag, phase):
+        wav = spectro2wav(
+            mag,
+            phase,
+            self.n_fft,
+            self.hop_length,
+            self.win_length,
+            self.spectro_scale,
+        )
+        return wav
+
+    def _low_freq_replacement(self, x, y, hf):
+        batch_size = x.shape[0]
+        for i in range(batch_size):
+            y[i, : hf[i], :] = x[i, : hf[i], :]
+        return y
+
+    def _normalize(self, x):
+        mean = x.mean(dim=(1, 2, 3), keepdim=True)
+        std = x.std(dim=(1, 2, 3), keepdim=True)
+        x = (x - mean) / (1e-5 + std)
+        return x, mean, std
+
+    def forward(self, x, hf):
+        verbose = True
+        length = x.shape[-1]
+        mag, phase = self._mag_phase(x)
+        mag_first_freq = mag[..., :1, :].clone()
+        phase_first_freq = phase[..., :1, :].clone()
+        mag = mag[..., 1:, :]
+        phase = phase[..., 1:, :]
+        if verbose:
+            print(f"Input shape: {mag.shape}")
+
+        mag, mag_mean, mag_std = self._normalize(mag)
+        phase, phase_mean, phase_std = self._normalize(phase)
+
+        residual_mag = mag.clone()
+        residual_phase = phase.clone()
+        # Skip connections
+        skip_connections = []
+        # Patch embedding
+        mag = self.patch_embed(mag)
+        skip_connections.append(mag)
+        if verbose:
+            print(f"Patch embedding shape: {mag.shape}")
+        if len(self.dims) == 5:
+            for i, layer in enumerate(self.layers_encoder):
+                mag = layer(mag)
+                skip_connections.append(mag)
+                if verbose:
+                    print(f"Encoder layer {i} shape: {mag.shape}")
+            # Latent layer
+            for i, layer in enumerate(self.layers_latent):
+                mag = layer(mag)
+                if verbose:
+                    print(f"Latent layer {i} shape: {mag.shape}")
+            if verbose:
+                # Print shape of each item in skip_connections
+                for i, skip in enumerate(skip_connections):
+                    print(f"Skip connection {i} shape: {skip.shape}")
+            # Decoder
+            for i, layer in enumerate(self.layers_decoder):
+                # Concatenate or add skip connection
+                mag = (
+                    torch.cat((mag, skip_connections.pop()), dim=-1)
+                    if self.concat_skip
+                    else (mag + skip_connections.pop())
+                )
+                mag = layer(mag)
+                if verbose:
+                    print(f"Decoder layer {i} shape: {mag.shape}")
+
+            # Concatenate or add skip connection
+            mag = (
+                torch.cat((mag, skip_connections.pop()), dim=-1)
+                if self.concat_skip
+                else (mag + skip_connections.pop())
+            )
+            if verbose:
+                print(f"Output layer input shape: {mag.shape}")
+
+            # Output layer
+            mag = self.output_layer(mag)
+
+            if verbose:
+                print(f"Patch output shape: {mag.shape}")
+        else:
+            # Encoder
+            for i, layer in enumerate(self.layers_encoder):
+                mag = layer(mag)
+                if i < self.num_layers - 1:
+                    skip_connections.append(mag)
+                if verbose:
+                    print(f"Encoder layer {i} shape: {mag.shape}")
+            if verbose:
+                # Print shape of each item in skip_connections
+                for i, skip in enumerate(skip_connections):
+                    print(f"Skip connection {i} shape: {skip.shape}")
+            # Decoder
+            for i, layer in enumerate(self.layers_decoder):
+                # Concatenate or add skip connection
+                if i != 0:
+                    mag = (
+                        torch.cat((mag, skip_connections.pop()), dim=-1)
+                        if self.concat_skip
+                        else (mag + skip_connections.pop())
+                    )
+
+                mag = layer(mag)
+                if verbose:
+                    print(f"Decoder layer {i} shape: {mag.shape}")
+
+            # Concatenate or add skip connection
+            mag = (
+                torch.cat((mag, skip_connections.pop()), dim=-1)
+                if self.concat_skip
+                else (mag + skip_connections.pop())
+            )
+            if verbose:
+                print(f"Output layer input shape: {mag.shape}")
+
+            # Output layer
+            mag = self.output_layer(mag)
+
+            if verbose:
+                print(f"Patch output shape: {mag.shape}")
+
+
+        mag = (mag + residual_mag) * mag_std + mag_mean
+        phase = phase * phase_std + phase_mean
+        # Concatenate the first freq back
+        mag = torch.cat([mag_first_freq, mag], dim=-2)
+        phase = torch.cat([phase_first_freq, phase], dim=-2)
+
+        # Inverse STFT
+        wav = self._i_mag_phase(mag, phase)
+        wav = wav[..., :length]
+
+        return wav
+
+    @staticmethod
+    def _make_patch_embed_v1(
+        in_chans=3,
+        embed_dim=96,
+        patch_size=4,
+        patch_norm=True,
+        norm_layer=nn.LayerNorm,
+        channel_first=False,
+    ):
+        # if channel first, then Norm and Output are both channel_first
+        return nn.Sequential(
+            nn.Conv2d(
+                in_chans,
+                embed_dim,
+                kernel_size=patch_size,
+                stride=patch_size,
+                bias=True,
+            ),
+            (nn.Identity() if channel_first else Permute(0, 2, 3, 1)),
+            (norm_layer(embed_dim) if patch_norm else nn.Identity()),
+        )
+
+    @staticmethod
+    def _make_patch_embed_v2(
+        in_chans=3,
+        embed_dim=96,
+        patch_size=4,
+        patch_norm=True,
+        norm_layer=LayerNorm2d,
+        channel_first=False,
+    ):
+        print(f"{bcolors.WARNING}normlayer (_make_patch_embed_v2): {norm_layer}{bcolors.ENDC}")
+        print(f"{bcolors.WARNING}patch_norm (_make_patch_embed_v2): {patch_norm}{bcolors.ENDC}")
+        print(f"{bcolors.WARNING}channel_first (_make_patch_embed_v2): {channel_first}{bcolors.ENDC}")
+        # VMamba set the patch size to 4, we follow this convention
+        assert patch_size == 4
+        # If channel_first is True, then Norm and Output are both channel_first
+        return nn.Sequential(
+            nn.Conv2d(in_chans, embed_dim // 2, kernel_size=3, stride=2, padding=1),
+            # Permute the dimensions if channel_first is False and patch_norm is True
+            (
+                nn.Identity()
+                if (channel_first and (patch_norm))
+                else Permute(0, 2, 3, 1)
+            ),
+            norm_layer(embed_dim // 2) if patch_norm else nn.Identity(),
+            (
+                nn.Identity()
+                if (channel_first and (patch_norm))
+                else Permute(0, 3, 1, 2)
+            ),
+            nn.GELU(),
+            nn.Conv2d(embed_dim // 2, embed_dim, kernel_size=3, stride=2, padding=1),
+            # Permute the dimensions if channel_first is False and patch_norm is True
+            (nn.Identity() if channel_first else Permute(0, 2, 3, 1)),
+            (norm_layer(embed_dim) if patch_norm else nn.Identity()),
+        )
+
+
+    @staticmethod
+    def _make_output_layer_v1(
+        in_chans=3,
+        dim=96,
+        concat_skip=False,
+        **kwargs,
+    ):
+        """
+        Output layer v1: Using two ConvTranspose2d for upscaling.
+
+        The first ConvTranspose2d decreases input channel size by half, and the second decreases it to the input channel size.
+        """
+        # If channel_first is True, then Norm and Output are both channel_first
+        return nn.Sequential(
+            Permute(0, 3, 1, 2),
+            (
+                nn.Conv2d(dim * 2, dim, kernel_size=1, stride=1, padding=0)
+                if concat_skip
+                else nn.Identity()
+            ),
+            nn.GELU(),
+            nn.ConvTranspose2d(
+                dim,
+                dim // 2,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),
+            nn.GELU(),
+            nn.ConvTranspose2d(
+                dim // 2,
+                in_chans,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),
+        )
+
+    def _make_output_layer_v2(
+        self,
+        in_chans=3,
+        dim=96,
+        sampler=nn.Identity(),
+        concat_skip=False,
+        # ===========================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer=nn.SiLU,
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # ===========================
+        mlp_ratio=4.0,
+        mlp_act_layer=nn.GELU,
+        mlp_drop_rate=0.0,
+        gmlp=False,
+        **kwargs,
+    ):
+        """
+        Output layer v2: Using VSSLayer + PatchExpanding for upscaling.
+        """
+
+        return nn.Sequential(
+            self.VSSLayer(
+                dim=dim,
+                drop_path=self.dpr[
+                    sum(self.depths[: self.num_layers - 1]) : sum(
+                        self.depths[: self.num_layers]
+                    )
+                ],
+                norm_layer=nn.LayerNorm,
+                sampler=sampler(
+                    dim,
+                    dim_scale=2,
+                    norm_layer=None,
+                ),
+                channel_first=self.channel_first,
+                concat_skip=concat_skip,
+                # =================
+                ssm_d_state=ssm_d_state,
+                ssm_ratio=ssm_ratio,
+                ssm_dt_rank=ssm_dt_rank,
+                ssm_act_layer=ssm_act_layer,
+                ssm_conv=ssm_conv,
+                ssm_conv_bias=ssm_conv_bias,
+                ssm_drop_rate=ssm_drop_rate,
+                ssm_init=ssm_init,
+                forward_type=forward_type,
+                # =================
+                mlp_ratio=mlp_ratio,
+                mlp_act_layer=mlp_act_layer,
+                mlp_drop_rate=mlp_drop_rate,
+                gmlp=gmlp,
+            ),
+            self.VSSLayer(
+                dim=dim // 2,
+                drop_path=self.dpr[
+                    sum(self.depths[: self.num_layers - 1]) : sum(
+                        self.depths[: self.num_layers]
+                    )
+                ],
+                norm_layer=nn.LayerNorm,
+                sampler=sampler(
+                    dim // 2,
+                    dim_scale=2,
+                    norm_layer=None,
+                ),
+                channel_first=self.channel_first,
+                concat_skip=False,
+                # =================
+                ssm_d_state=ssm_d_state,
+                ssm_ratio=ssm_ratio,
+                ssm_dt_rank=ssm_dt_rank,
+                ssm_act_layer=ssm_act_layer,
+                ssm_conv=ssm_conv,
+                ssm_conv_bias=ssm_conv_bias,
+                ssm_drop_rate=ssm_drop_rate,
+                ssm_init=ssm_init,
+                forward_type=forward_type,
+                # =================
+                mlp_ratio=mlp_ratio,
+                mlp_act_layer=mlp_act_layer,
+                mlp_drop_rate=mlp_drop_rate,
+                gmlp=gmlp,
+            ),
+            Permute(0, 3, 1, 2),
+            (
+                nn.Conv2d(dim // 4, in_chans, kernel_size=1, stride=1, padding=0)
+                if dim // 4 != in_chans
+                else nn.Identity()
+            ),
+        )
+
+    def _make_output_layer_v3(
+        self,
+        in_chans=1,
+        dim=96,
+        sampler=nn.Identity(),
+        concat_skip=True,
+        # ===========================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer=nn.SiLU,
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # ===========================
+        mlp_ratio=4.0,
+        mlp_act_layer=nn.GELU,
+        mlp_drop_rate=0.0,
+        gmlp=False,
+        **kwargs,
+    ):
+        """
+        Output layer v3: Using Conv2d (skip connection) + PatchExpanding + VSSLayer for upscaling.
+        """
+        print(f"OUTPUT layer DROP PATH: {self.dpr[-1:]}")
+        return nn.Sequential(
+            # self.VSSLayer(
+            self.VSSLayer_PVM(
+                dim=dim,
+                drop_path=self.dpr[-1:],
+                norm_layer=nn.Identity,
+                # Input: (B, H, W, C) -> Output: (B, 2 * H, 2 * W, C // 2)
+                sampler=sampler(
+                    dim,
+                    dim_scale=2,
+                    norm_layer=LayerNorm2d,
+                ),
+                channel_first=self.channel_first,
+                concat_skip=concat_skip,
+                # =================
+                ssm_d_state=ssm_d_state,
+                ssm_ratio=ssm_ratio,
+                ssm_dt_rank=ssm_dt_rank,
+                ssm_act_layer=ssm_act_layer,
+                ssm_conv=ssm_conv,
+                ssm_conv_bias=ssm_conv_bias,
+                ssm_drop_rate=ssm_drop_rate,
+                ssm_init=ssm_init,
+                forward_type=forward_type,
+                # =================
+                mlp_ratio=mlp_ratio,
+                mlp_act_layer=mlp_act_layer,
+                mlp_drop_rate=mlp_drop_rate,
+                gmlp=gmlp,
+                # =============================
+                reduce_factor = 4,
+                # =============================
+            ),
+            # Refine the output
+            # self.VSSLayer(
+            self.VSSLayer_PVM(
+                dim=dim // 2,
+                drop_path=self.dpr[-1:],
+                norm_layer=LayerNorm2d,
+                # Input: (B, 2 * H, 2 * W, C // 2) -> Output: (B, 4 * H, 4 * W, C // 4)
+                sampler=sampler(
+                    dim // 2,
+                    dim_scale=2,
+                    norm_layer=LayerNorm2d,
+                ),
+                channel_first=self.channel_first,
+                concat_skip=False,  # We already handle the skip connection above
+                # =================
+                ssm_d_state=ssm_d_state,
+                ssm_ratio=ssm_ratio,
+                ssm_dt_rank=ssm_dt_rank,
+                ssm_act_layer=ssm_act_layer,
+                ssm_conv=ssm_conv,
+                ssm_conv_bias=ssm_conv_bias,
+                ssm_drop_rate=ssm_drop_rate,
+                ssm_init=ssm_init,
+                forward_type=forward_type,
+                # =================
+                mlp_ratio=mlp_ratio,
+                mlp_act_layer=mlp_act_layer,
+                mlp_drop_rate=mlp_drop_rate,
+                gmlp=gmlp,
+                # =================
+                reduce_factor=4,
+                # =================
+            ),
+            # Input: (B, C // 4, 4 * H, 4 * W, C // 4) -> Output: (B, C, 4 * H, 4 * W)
+            nn.Conv2d(dim // 4, in_chans, kernel_size=1, stride=1, padding=0),
+            # Refine the output
+            self.VSSLayer(
+            # self.VSSLayer_PVM(
+                dim=in_chans,
+                drop_path=self.dpr[-1:],
+                norm_layer=nn.Identity,
+                sampler=nn.Identity(),
+                channel_first=self.channel_first,
+                concat_skip=False,  # We already handle the skip connection above
+                # =================
+                ssm_d_state=ssm_d_state,
+                ssm_ratio=ssm_ratio,
+                ssm_dt_rank=ssm_dt_rank,
+                ssm_act_layer=ssm_act_layer,
+                ssm_conv=ssm_conv,
+                ssm_conv_bias=ssm_conv_bias,
+                ssm_drop_rate=ssm_drop_rate,
+                ssm_init=ssm_init,
+                forward_type=forward_type,
+                # =================
+                mlp_ratio=mlp_ratio,
+                mlp_act_layer=mlp_act_layer,
+                mlp_drop_rate=mlp_drop_rate,
+                gmlp=gmlp,
+            ),
+            # Permute(0, 3, 1, 2),
+        )
+
+    @staticmethod
+    def VSSLayer(
+        dim=96,
+        drop_path=[0.1, 0.1],
+        norm_layer=LayerNorm2d,
+        sampler=nn.Identity(),
+        channel_first=True,
+        concat_skip=False,
+        # ===========================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer=nn.SiLU,
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # ===========================
+        mlp_ratio=4.0,
+        mlp_act_layer=nn.GELU,
+        mlp_drop_rate=0.0,
+        gmlp=False,
+        **kwargs,
+    ):
+        skip_handler = nn.Identity()
+        if concat_skip:            
+            skip_handler = nn.Conv2d(2 * dim, dim, kernel_size=1, stride=1, padding=0)
+
+        # If channel first, then Norm and Output are both channel_first
+        depth = len(drop_path)        
+        blocks = []
+        for d in range(depth):
+            blocks.append(
+                VSSBlock(
+                    hidden_dim=dim,
+                    drop_path=drop_path[d],
+                    norm_layer=norm_layer,
+                    channel_first=channel_first,
+                    ssm_d_state=ssm_d_state,
+                    ssm_ratio=ssm_ratio,
+                    ssm_dt_rank=ssm_dt_rank,
+                    ssm_act_layer=ssm_act_layer,
+                    ssm_conv=ssm_conv,
+                    ssm_conv_bias=ssm_conv_bias,
+                    ssm_drop_rate=ssm_drop_rate,
+                    ssm_init=ssm_init,
+                    forward_type=forward_type,
+                    mlp_ratio=mlp_ratio,
+                    mlp_act_layer=mlp_act_layer,
+                    mlp_drop_rate=mlp_drop_rate,
+                    gmlp=gmlp,
+                )
+            )
+
+        return nn.Sequential(
+            OrderedDict(
+                [
+                    ("skip_handler", skip_handler),
+                    ("blocks", nn.Sequential(*blocks)),
+                    ("sampler", sampler),
+                ]
+            )
+        )
+
+    @staticmethod
+    def VSSLayer_PVM(
+        dim=96,
+        drop_path=[0.1, 0.1],
+        norm_layer=LayerNorm2d,
+        sampler=nn.Identity(),
+        channel_first=True,
+        concat_skip=False,
+        # ===========================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer=nn.SiLU,
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # ===========================
+        mlp_ratio=4.0,
+        mlp_act_layer=nn.GELU,
+        mlp_drop_rate=0.0,
+        gmlp=False,
+        # ===========================
+        reduce_factor = 4,
+        # ===========================
+        **kwargs,
+    ):
+        skip_handler = nn.Identity()
+        if concat_skip:            
+            skip_handler = nn.Conv2d(2 * dim, dim, kernel_size=1, stride=1, padding=0)
+
+        # If channel first, then Norm and Output are both channel_first
+        depth = len(drop_path)        
+        blocks = []
+        for d in range(depth):
+            blocks.append(
+                VSSBlock_PVM(
+                    hidden_dim=dim,
+                    drop_path=drop_path[d],
+                    norm_layer=norm_layer,
+                    channel_first=channel_first,
+                    ssm_d_state=ssm_d_state,
+                    ssm_ratio=ssm_ratio,
+                    ssm_dt_rank=ssm_dt_rank,
+                    ssm_act_layer=ssm_act_layer,
+                    ssm_conv=ssm_conv,
+                    ssm_conv_bias=ssm_conv_bias,
+                    ssm_drop_rate=ssm_drop_rate,
+                    ssm_init=ssm_init,
+                    forward_type=forward_type,
+                    mlp_ratio=mlp_ratio,
+                    mlp_act_layer=mlp_act_layer,
+                    mlp_drop_rate=mlp_drop_rate,
+                    gmlp=gmlp,
+                    reduce_factor = reduce_factor,
+                )
+            )
+
+        return nn.Sequential(
+            OrderedDict(
+                [
+                    ("skip_handler", skip_handler),
+                    ("blocks", nn.Sequential(*blocks)),
+                    ("sampler", sampler),
+                ]
+            )
+        )
+
+    @staticmethod
+    def VSSLayer_Downstream(
+        dim=96,
+        drop_path=[0.1, 0.1],
+        norm_layer=LayerNorm2d,        
+        channel_first=True,        
+        # ===========================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer=nn.SiLU,
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # ===========================
+        mlp_ratio=4.0,
+        mlp_act_layer=nn.GELU,
+        mlp_drop_rate=0.0,        
+        last_layer = False,
+        **kwargs,
+    ):
+        depth = len(drop_path)        
+        blocks = []               
+        for d in range(depth):
+            blocks.append(
+                VSSBlock_Downstream(
+                    hidden_dim=dim,
+                    # drop_path=drop_path if depth == 1 else drop_path[d],
+                    drop_path=drop_path[d],
+                    norm_layer=norm_layer,
+                    channel_first=channel_first,
+                    ssm_d_state=ssm_d_state,
+                    ssm_ratio=ssm_ratio,
+                    ssm_dt_rank=ssm_dt_rank,
+                    ssm_act_layer=ssm_act_layer,
+                    ssm_conv=ssm_conv,
+                    ssm_conv_bias=ssm_conv_bias,
+                    ssm_drop_rate=ssm_drop_rate,
+                    ssm_init=ssm_init,
+                    forward_type=forward_type,
+                    mlp_ratio=mlp_ratio,
+                    mlp_act_layer=mlp_act_layer,
+                    mlp_drop_rate=mlp_drop_rate,
+                    gmlp=False,
+                    block_last_vss = (True if (d == (depth - 1) and not last_layer)
+                                        else False),
+                )
+            )
+
+        return nn.Sequential(OrderedDict([("blocks", nn.Sequential(*blocks)),]))
+
+    @staticmethod
+    def VSSLayer_Downstream_PVM(
+        dim=96,
+        drop_path=[0.1, 0.1],
+        norm_layer=LayerNorm2d,        
+        channel_first=True,        
+        # ===========================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer=nn.SiLU,
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # ===========================
+        mlp_ratio=4.0,
+        mlp_act_layer=nn.GELU,
+        mlp_drop_rate=0.0,        
+        last_layer = False,
+        # ===========================
+        reduce_factor = 4,
+        # ===========================
+        **kwargs,
+    ):
+        depth = len(drop_path)        
+        blocks = []               
+        for d in range(depth):
+            blocks.append(
+                VSSBlock_Downstream_PVM(
+                    hidden_dim=dim,                    
+                    drop_path=drop_path[d],
+                    norm_layer=norm_layer,
+                    channel_first=channel_first,
+                    ssm_d_state=ssm_d_state,
+                    ssm_ratio=ssm_ratio,
+                    ssm_dt_rank=ssm_dt_rank,
+                    ssm_act_layer=ssm_act_layer,
+                    ssm_conv=ssm_conv,
+                    ssm_conv_bias=ssm_conv_bias,
+                    ssm_drop_rate=ssm_drop_rate,
+                    ssm_init=ssm_init,
+                    forward_type=forward_type,
+                    mlp_ratio=mlp_ratio,
+                    mlp_act_layer=mlp_act_layer,
+                    mlp_drop_rate=mlp_drop_rate,
+                    gmlp=False,
+                    block_last_vss = (True if (d == (depth - 1) and not last_layer)
+                                        else False),
+                    reduce_factor = reduce_factor,
+                )
+            )
+
+        return nn.Sequential(OrderedDict([("blocks", nn.Sequential(*blocks)),]))
+
+    def _init_weights(self, m: nn.Module):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=0.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    @torch.no_grad()
+    def flops(self, shape=(1, 40880)):
+        # shape = self.__input_shape__[1:]
+        supported_ops = {
+            "aten::silu": None,  # as relu is in _IGNORED_OPS
+            "aten::gelu": None,  # as relu is in _IGNORED_OPS
+            "aten::neg": None,  # as relu is in _IGNORED_OPS
+            "aten::exp": None,  # as relu is in _IGNORED_OPS
+            "aten::flip": None,  # as permute is in _IGNORED_OPS
+            # "prim::PythonOp.CrossScan": None,
+            # "prim::PythonOp.CrossMerge": None,
+            "prim::PythonOp.SelectiveScanMamba": selective_scan_flop_jit,
+            "prim::PythonOp.SelectiveScanOflex": selective_scan_flop_jit,
+            "prim::PythonOp.SelectiveScanCore": selective_scan_flop_jit,
+            "prim::PythonOp.SelectiveScanNRow": selective_scan_flop_jit,
+        }
+
+        model = deepcopy(self)
+        model.cuda().eval()
+
+        input = torch.randn((1, *shape), device=next(model.parameters()).device)
+        # hf is a random number between 0 and 512
+        hf = torch.randint(0, 512, (1,), device=next(model.parameters()).device)
+        params = parameter_count(model)[""]
+        Gflops, unsupported = flop_count(
+            model=model, inputs=(input, hf), supported_ops=supported_ops
+        )
+        statics = summary(model, input_data=[input, hf], verbose=0)
+        del model, input
+        torch.cuda.empty_cache()
+
+        # Return the number of parameters and FLOPs
+        return (
+            f"{statics}\nparams {params/1e6:.2f}M, GFLOPs {sum(Gflops.values()):.2f}\n"
+        )
+
+
+
+class DualStreamInteractiveMambaUNet(MambaUNet):
+    """
+    InteractiveVSSLayers
+    """
+
+    def __init__(
+        self,
+        patch_size=4,
+        in_chans=1,
+        depths=[2, 2, 2, 2],
+        dims=[96, 192, 384, 768],
+        # ==============================
+        ssm_d_state=16,
+        ssm_ratio=2.0,
+        ssm_dt_rank="auto",
+        ssm_act_layer="silu",
+        ssm_conv=3,
+        ssm_conv_bias=True,
+        ssm_drop_rate=0.0,
+        ssm_init="v0",
+        forward_type="v2",
+        # =========================
+        mlp_ratio=4.0,
+        mlp_act_layer="gelu",
+        mlp_drop_rate=0.0,
+        gmlp=False,
+        # =========================
+        drop_path_rate=0.1,
+        patch_norm=True,
+        norm_layer="LN",  # "BN", "LN2D"
+        patchembed_version: str = "v2",  # "v1", "v2"
+        downsample_version: str = "v1",  # "v1", "v2", "v3"
+        upsample_version: str = "v1",  # "v1"
+        output_version: str = "v2",  # "v1", "v2", "v3"
+        concat_skip=False,
+        interact="dual",  # "dual", "m2p", "p2m"
+        **kwargs,
+    ):
+        # Initialize the MambaUNet
+        super().__init__(
+            patch_size,
+            in_chans,
+            depths,
+            dims,
+            ssm_d_state,
+            ssm_ratio,
+            ssm_dt_rank,
+            ssm_act_layer,
+            ssm_conv,
+            ssm_conv_bias,
+            ssm_drop_rate,
+            ssm_init,
+            forward_type,
+            mlp_ratio,
+            mlp_act_layer,
+            mlp_drop_rate,
+            gmlp,
+            drop_path_rate,
+            patch_norm,
+            norm_layer,
+            patchembed_version,
+            downsample_version,
+            upsample_version,
+            output_version,
+            concat_skip,
+            **kwargs,
+        )
+        # Set the interact mode
+        self.interact = interact
+        # Deep copy patch embedding, encoder, latent, decoder and output in MambaUNet
+        # Create magnitude stream
+        self.patch_embed_mag = deepcopy(self.patch_embed)
+        self.layers_encoder_mag = deepcopy(self.layers_encoder)
+        self.layers_latent_mag = (
+            deepcopy(self.layers_latent) if len(self.dims) == 5 else None
+        )
+        self.layers_decoder_mag = deepcopy(self.layers_decoder)
+        self.output_layer_mag = deepcopy(self.output_layer)
+        # Create phase stream
+        if self.interact != "single":
+            self.patch_embed_phase = deepcopy(self.patch_embed)
+            self.layers_encoder_phase = deepcopy(self.layers_encoder)
+            self.layers_latent_phase = (
+                deepcopy(self.layers_latent) if len(self.dims) == 5 else None
+            )
+            self.layers_decoder_phase = deepcopy(self.layers_decoder)
+            self.output_layer_phase = deepcopy(self.output_layer)
+
+        # Delete layers in MambaUNet to save memory
+        del self.patch_embed
+        del self.layers_encoder
+        del self.layers_latent
+        del self.layers_decoder
+        del self.output_layer
+
+        self.apply(self._init_weights)
+
+    def _forward_inter(self, x, hf):
+        length = x.shape[-1]
+        mag, phase = self._mag_phase(x)
+        
+        mag_first_freq = mag[..., :1, :].clone()
+        phase_first_freq = phase[..., :1, :].clone()
+        
+        mag = mag[..., 1:, :]
+        phase = phase[..., 1:, :]
+        
+        residual_mag = mag.clone()
+        
+        # Skip connections
+        skip_connections = []
+        # Patch embedding
+        mag = self.patch_embed_mag(mag)
+        phase = self.patch_embed_phase(phase)
+        skip_connections.append((mag, phase))
+        
+        # Encoders (zip is used to iterate over two lists at the same time)
+        for i, (encoder_mag, encoder_phase) in enumerate(zip(self.layers_encoder_mag, self.layers_encoder_phase)):
+            mag = encoder_mag(mag)
+            phase = encoder_phase(phase)
+            if i < self.num_layers - 1:                
+                skip_connections.append((mag, phase))
+            # Interacting
+            mag = mag + phase
+            phase = phase + mag
+
+        # Decoders
+        for i, (decoder_mag, decoder_phase) in enumerate(zip(self.layers_decoder_mag, self.layers_decoder_phase)):
+            if i != 0:
+                # Concatenate or add skip connection
+                mag_skip, phase_skip = skip_connections.pop()
+                if self.concat_skip:                    
+                    mag = decoder_mag(torch.cat((mag, mag_skip), dim=1))
+                    phase = decoder_mag(torch.cat((phase, phase_skip), dim=1))
+                else:
+                    mag = decoder_mag(mag + mag_skip)
+                    phase = decoder_phase(phase + phase_skip)
+            else:
+                mag = decoder_mag(mag)
+                phase = decoder_phase(phase)
+
+            # Interacting
+            mag = mag + phase
+            phase = phase + mag
+
+        # Concatenate or add skip connection for the output layer
+        mag_skip, phase_skip = skip_connections.pop()        
+        
+        if self.concat_skip:            
+            mag = self.output_layer_mag(torch.cat((mag, mag_skip), dim=1))
+            phase = self.output_layer_phase(torch.cat((phase, phase_skip), dim=1))
+        else:
+            mag = self.output_layer_mag(mag + mag_skip)
+            phase = self.output_layer_phase(phase + phase_skip)
+        
+
+        # Residual connection
+        mag = mag + residual_mag
+        # Recover the magnitude and phase    
+        mag = torch.cat([mag_first_freq, mag], dim=-2)
+        phase = torch.cat([phase_first_freq, phase], dim=-2)
+        # Replace the output low frequency band with the input's
+        if self.low_freq_replacement:
+            mag_org, phase_org = self._mag_phase(x)
+            # Replace the output low frequency band with the input's
+            mag = self._low_freq_replacement(mag, mag_org, hf)
+            phase = self._low_freq_replacement(phase, phase_org, hf)
+        # Inverse STFT
+        wav = self._i_mag_phase(mag, phase)
+        # Truncate the output to the original length
+        wav = wav[..., :length]
+
+        return wav
+
+    def forward(self, x, hf):
+        return self._forward_inter(x, hf)

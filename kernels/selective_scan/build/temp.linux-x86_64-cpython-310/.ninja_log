@@ -1,0 +1,10 @@
+# ninja log v5
+1	9761	1761203787634825342	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cus/selective_scan_core_fwd.o	9f0e29143dac5fa3
+1	18057	1761203795934713443	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cus/selective_scan.o	4cf2d25a365e68cc
+1	29143	1761203806985564538	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cus/selective_scan_core_bwd.o	16f8fc7d51e2d011
+4	8997	1761203832791217173	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cusndstate/selective_scan_core_fwd.o	b0cdafa6856e0b7
+4	18539	1761203842338088785	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cusndstate/selective_scan_ndstate.o	9ddc482620f59568
+4	28522	1761203852271955260	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cusndstate/selective_scan_core_bwd.o	20330b0cf246c7fb
+4	14841	1761203867860745861	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cusoflex/selective_scan_core_fwd.o	4658c05543927d4b
+4	17059	1761203870095715853	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cusoflex/selective_scan_oflex.o	63b059d458d4b72a
+3	45272	1761203898274337788	/E/Personal_AI_Model_Training/M11309813/myenv/AMB_1/kernels/selective_scan/build/temp.linux-x86_64-cpython-310/csrc/selective_scan/cusoflex/selective_scan_core_bwd.o	633cacc49bc37757

@@ -1,0 +1,13 @@
+sox
+tqdm
+timm
+wandb
+scipy
+numpy
+pandas
+einops
+fvcore
+torchinfo
+matplotlib
+prettytable
+tensorboard>=1.14
