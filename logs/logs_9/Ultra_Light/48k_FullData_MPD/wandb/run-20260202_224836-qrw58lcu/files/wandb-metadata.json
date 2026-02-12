@@ -1,0 +1,74 @@
+{
+  "os": "Linux-6.8.0-90-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.19",
+  "startedAt": "2026-02-02T14:48:36.845624Z",
+  "args": [
+    "--cfg",
+    "configs/upvm_asr_48k_MPD.yaml",
+    "--tag",
+    "48k_8k_FullData_MPD",
+    "--output",
+    "logs/logs_9/",
+    "--input_sr",
+    "16000",
+    "--disable_amp",
+    "--resume",
+    "logs/logs_9/Ultra_Light/48k_FullData_MPD"
+  ],
+  "program": "/F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/main.py",
+  "codePath": "main.py",
+  "codePathLocal": "main.py",
+  "git": {
+    "remote": "https://github.com/HTTP123-A/UPVM-ASR.git",
+    "commit": "46ad6bfebdfc2be7bc8cefd6305bdfe597c390b6"
+  },
+  "email": "ngquangph@gmail.com",
+  "root": "logs/logs_9/Ultra_Light/48k_FullData_MPD",
+  "host": "PowerEdge-R760xa",
+  "executable": "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/bin/python3",
+  "cpu_count": 56,
+  "cpu_count_logical": 112,
+  "gpu": "NVIDIA A40",
+  "gpu_count": 4,
+  "disk": {
+    "/": {
+      "total": "470822240256",
+      "used": "238352564224"
+    }
+  },
+  "memory": {
+    "total": "540498427904"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A40",
+      "memoryTotal": "48305799168",
+      "cudaCores": 10752,
+      "architecture": "Ampere",
+      "uuid": "GPU-e140ce89-4fa5-9443-1905-87f98c38325e"
+    },
+    {
+      "name": "NVIDIA A40",
+      "memoryTotal": "48305799168",
+      "cudaCores": 10752,
+      "architecture": "Ampere",
+      "uuid": "GPU-33ec8564-8293-2f17-b156-1aa192fc8cbf"
+    },
+    {
+      "name": "NVIDIA A40",
+      "memoryTotal": "48305799168",
+      "cudaCores": 10752,
+      "architecture": "Ampere",
+      "uuid": "GPU-73808917-fcac-abce-24c0-d74f6b662673"
+    },
+    {
+      "name": "NVIDIA A40",
+      "memoryTotal": "48305799168",
+      "cudaCores": 10752,
+      "architecture": "Ampere",
+      "uuid": "GPU-bfedf9d7-83e0-a425-eb66-099bc9352eb9"
+    }
+  ],
+  "cudaVersion": "13.1",
+  "writerId": "ovmy23ei6d38uyeai3p20mn9mnloir0u"
+}

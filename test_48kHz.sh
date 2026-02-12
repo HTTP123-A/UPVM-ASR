@@ -9,7 +9,7 @@ SAMPLE_RATES=(16000)
 for SR in "${SAMPLE_RATES[@]}"
 do
     python3 main.py \
-        --cfg configs/vm_asr_48k_MPD.yaml \
+        --cfg configs/upvm_asr_48k_MPD.yaml \
         --resume logs/logs_${LOG_INDEX}/Ultra_Light/48k_FullData_MPD \
         --eval \
         --tag ${SR}_48000 \

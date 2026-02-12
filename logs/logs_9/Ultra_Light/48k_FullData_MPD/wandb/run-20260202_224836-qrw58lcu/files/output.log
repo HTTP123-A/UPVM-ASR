@@ -1,0 +1,244 @@
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(data_loaders.py 233)[0m: INFO Loading training sample IDs...
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(data_loaders.py 300)[0m: INFO Loading 1.0% of the sample IDs (40936 of 40936)...
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(optimizer.py 9)[0m: INFO ==============> building optimizer adamw....................
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(optimizer.py 27)[0m: INFO No weight decay list: ['patch_embed_mag.0.bias', 'patch_embed_mag.2.weight', 'patch_embed_mag.2.bias', 'patch_embed_mag.5.bias', 'patch_embed_mag.7.weight', 'patch_embed_mag.7.bias', 'layers_encoder_mag.0.blocks.0.norm.weight', 'layers_encoder_mag.0.blocks.0.norm.bias', 'layers_encoder_mag.0.blocks.0.ss2d.Ds', 'layers_encoder_mag.0.blocks.0.ss2d.out_norm.weight', 'layers_encoder_mag.0.blocks.0.ss2d.out_norm.bias', 'layers_encoder_mag.0.blocks.0.ss2d.conv2d.bias', 'layers_encoder_mag.0.blocks.0.norm2.weight', 'layers_encoder_mag.0.blocks.0.norm2.bias', 'layers_encoder_mag.0.blocks.0.mlp.fc1.bias', 'layers_encoder_mag.1.blocks.0.norm.weight', 'layers_encoder_mag.1.blocks.0.norm.bias', 'layers_encoder_mag.1.blocks.0.ss2d.Ds', 'layers_encoder_mag.1.blocks.0.ss2d.out_norm.weight', 'layers_encoder_mag.1.blocks.0.ss2d.out_norm.bias', 'layers_encoder_mag.1.blocks.0.ss2d.conv2d.bias', 'layers_encoder_mag.1.blocks.0.norm2.weight', 'layers_encoder_mag.1.blocks.0.norm2.bias', 'layers_encoder_mag.1.blocks.0.mlp.fc1.bias', 'layers_encoder_mag.2.blocks.0.norm.weight', 'layers_encoder_mag.2.blocks.0.norm.bias', 'layers_encoder_mag.2.blocks.0.ss2d.Ds', 'layers_encoder_mag.2.blocks.0.ss2d.out_norm.weight', 'layers_encoder_mag.2.blocks.0.ss2d.out_norm.bias', 'layers_encoder_mag.2.blocks.0.ss2d.conv2d.bias', 'layers_encoder_mag.2.blocks.0.norm2.weight', 'layers_encoder_mag.2.blocks.0.norm2.bias', 'layers_encoder_mag.2.blocks.0.mlp.fc1.bias', 'layers_encoder_mag.3.blocks.0.norm.weight', 'layers_encoder_mag.3.blocks.0.norm.bias', 'layers_encoder_mag.3.blocks.0.ss2d.Ds', 'layers_encoder_mag.3.blocks.0.ss2d.out_norm.weight', 'layers_encoder_mag.3.blocks.0.ss2d.out_norm.bias', 'layers_encoder_mag.3.blocks.0.ss2d.conv2d.bias', 'layers_encoder_mag.3.blocks.0.norm2.weight', 'layers_encoder_mag.3.blocks.0.norm2.bias', 'layers_encoder_mag.3.blocks.0.mlp.fc1.bias', 'layers_encoder_mag.3.blocks.0.mlp.fc2.bias', 'layers_decoder_mag.1.skip_handler.bias', 'layers_decoder_mag.1.blocks.0.norm.weight', 'layers_decoder_mag.1.blocks.0.norm.bias', 'layers_decoder_mag.1.blocks.0.ss2d.Ds', 'layers_decoder_mag.1.blocks.0.ss2d.out_norm.weight', 'layers_decoder_mag.1.blocks.0.ss2d.out_norm.bias', 'layers_decoder_mag.1.blocks.0.ss2d.conv2d.bias', 'layers_decoder_mag.1.blocks.0.norm2.weight', 'layers_decoder_mag.1.blocks.0.norm2.bias', 'layers_decoder_mag.1.blocks.0.mlp.fc1.bias', 'layers_decoder_mag.1.blocks.0.mlp.fc2.bias', 'layers_decoder_mag.1.sampler.norm.weight', 'layers_decoder_mag.1.sampler.norm.bias', 'layers_decoder_mag.2.skip_handler.bias', 'layers_decoder_mag.2.blocks.0.norm.weight', 'layers_decoder_mag.2.blocks.0.norm.bias', 'layers_decoder_mag.2.blocks.0.ss2d.Ds', 'layers_decoder_mag.2.blocks.0.ss2d.out_norm.weight', 'layers_decoder_mag.2.blocks.0.ss2d.out_norm.bias', 'layers_decoder_mag.2.blocks.0.ss2d.conv2d.bias', 'layers_decoder_mag.2.blocks.0.norm2.weight', 'layers_decoder_mag.2.blocks.0.norm2.bias', 'layers_decoder_mag.2.blocks.0.mlp.fc1.bias', 'layers_decoder_mag.2.blocks.0.mlp.fc2.bias', 'layers_decoder_mag.2.sampler.norm.weight', 'layers_decoder_mag.2.sampler.norm.bias', 'layers_decoder_mag.3.skip_handler.bias', 'layers_decoder_mag.3.blocks.0.norm.weight', 'layers_decoder_mag.3.blocks.0.norm.bias', 'layers_decoder_mag.3.blocks.0.ss2d.Ds', 'layers_decoder_mag.3.blocks.0.ss2d.out_norm.weight', 'layers_decoder_mag.3.blocks.0.ss2d.out_norm.bias', 'layers_decoder_mag.3.blocks.0.ss2d.conv2d.bias', 'layers_decoder_mag.3.blocks.0.norm2.weight', 'layers_decoder_mag.3.blocks.0.norm2.bias', 'layers_decoder_mag.3.blocks.0.mlp.fc1.bias', 'layers_decoder_mag.3.blocks.0.mlp.fc2.bias', 'layers_decoder_mag.3.sampler.norm.weight', 'layers_decoder_mag.3.sampler.norm.bias', 'output_layer_mag.0.skip_handler.bias', 'output_layer_mag.0.blocks.0.ss2d.Ds', 'output_layer_mag.0.blocks.0.ss2d.out_norm.weight', 'output_layer_mag.0.blocks.0.ss2d.out_norm.bias', 'output_layer_mag.0.blocks.0.ss2d.conv2d.bias', 'output_layer_mag.0.blocks.0.mlp.fc1.bias', 'output_layer_mag.0.blocks.0.mlp.fc2.b
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(optimizer.py 9)[0m: INFO ==============> building optimizer adamw....................
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(optimizer.py 27)[0m: INFO No weight decay list: ['discriminators.0.layers.0.bias', 'discriminators.0.layers.1.bias', 'discriminators.0.layers.2.bias', 'discriminators.0.layers.3.bias', 'discriminators.0.layers.4.bias', 'discriminators.0.conv_post.bias', 'discriminators.1.layers.0.bias', 'discriminators.1.layers.1.bias', 'discriminators.1.layers.2.bias', 'discriminators.1.layers.3.bias', 'discriminators.1.layers.4.bias', 'discriminators.1.conv_post.bias', 'discriminators.2.layers.0.bias', 'discriminators.2.layers.1.bias', 'discriminators.2.layers.2.bias', 'discriminators.2.layers.3.bias', 'discriminators.2.layers.4.bias', 'discriminators.2.conv_post.bias', 'discriminators.3.layers.0.bias', 'discriminators.3.layers.1.bias', 'discriminators.3.layers.2.bias', 'discriminators.3.layers.3.bias', 'discriminators.3.layers.4.bias', 'discriminators.3.conv_post.bias', 'discriminators.4.layers.0.bias', 'discriminators.4.layers.1.bias', 'discriminators.4.layers.2.bias', 'discriminators.4.layers.3.bias', 'discriminators.4.layers.4.bias', 'discriminators.4.conv_post.bias']
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(utils.py 121)[0m: INFO Loading checkpoint from folder: logs/logs_9/Ultra_Light/48k_FullData_MPD
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(utils.py 128)[0m: INFO No best checkpoints found in the folder. Training from scratch ...
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(base_trainer.py 199)[0m: INFO Resuming training from epoch 1 / 50 ...
+[32m[2026-02-02 22:48:38 Pytorch_CUDA_mix_BCHW_0][0m[33m(trainer.py 86)[0m: INFO Train metrics: ['total_loss', 'snr', 'lsd', 'lsd_hf', 'lsd_lf', 'stoi']
+input params:  u.1 delta.1 A.1 B.1 C.1 D.1 delta_bias.1
+input params:  u.3 delta.3 A.3 B.3 C.3 D.3 delta_bias.3
+input params:  u.5 delta.5 A.5 B.5 C.5 D.5 delta_bias.5
+input params:  u.7 delta.7 A.7 B.7 C.7 D.7 delta_bias.7
+input params:  u.9 delta.9 A.9 B.9 C.9 D.9 delta_bias.9
+input params:  u.11 delta.11 A.11 B.11 C.11 D.11 delta_bias.11
+input params:  u.13 delta.13 A.13 B.13 C.13 D.13 delta_bias.13
+input params:  u.15 delta.15 A.15 B.15 C.15 D.15 delta_bias.15
+input params:  u.17 delta.17 A.17 B.17 C.17 D.17 delta_bias.17
+input params:  u.19 delta.19 A.19 B.19 C.19 D.19 delta_bias.19
+input params:  u.21 delta.21 A.21 B.21 C.21 D.21 delta_bias.21
+input params:  u.23 delta.23 A.23 B.23 C.23 D.23 delta_bias.23
+input params:  u.25 delta.25 A.25 B.25 C.25 D.25 delta_bias.25
+input params:  u.27 delta.27 A.27 B.27 C.27 D.27 delta_bias.27
+input params:  u.29 delta.29 A.29 B.29 C.29 D.29 delta_bias.29
+input params:  u.31 delta.31 A.31 B.31 C.31 D.31 delta_bias.31
+input params:  u.33 delta.33 A.33 B.33 C.33 D.33 delta_bias.33
+input params:  u.35 delta.35 A.35 B.35 C.35 D.35 delta_bias.35
+input params:  u.37 delta.37 A.37 B.37 C.37 D.37 delta_bias.37
+input params:  u delta A B C D delta_bias
+Unsupported operator aten::hann_window encountered 3 time(s)
+Unsupported operator aten::pad encountered 2 time(s)
+Unsupported operator aten::stft encountered 2 time(s)
+Unsupported operator aten::abs encountered 2 time(s)
+Unsupported operator aten::add encountered 59 time(s)
+Unsupported operator aten::log2 encountered 2 time(s)
+Unsupported operator aten::angle encountered 2 time(s)
+Unsupported operator aten::clone encountered 15 time(s)
+Unsupported operator aten::mul encountered 58 time(s)
+Unsupported operator prim::PythonOp.CrossScan encountered 20 time(s)
+Unsupported operator prim::PythonOp.CrossMerge encountered 20 time(s)
+Unsupported operator aten::pixel_shuffle encountered 10 time(s)
+Unsupported operator aten::exp2 encountered 1 time(s)
+Unsupported operator aten::polar encountered 1 time(s)
+Unsupported operator aten::istft encountered 1 time(s)
+The following submodules of the model were never called during the trace of the graph. They may be unused, or they were accessed by direct calls to .forward() or via other python methods. In the latter case they will have zeros for statistics, though their statistics will still contribute to their parent calling module.
+layers_decoder_mag.0, layers_decoder_mag.0.blocks, layers_decoder_mag.1.blocks.0.drop_path, layers_decoder_mag.2.blocks.0.drop_path, layers_decoder_mag.3.blocks.0.drop_path, layers_decoder_phase.0, layers_decoder_phase.0.blocks, layers_decoder_phase.1, layers_decoder_phase.1.blocks, layers_decoder_phase.1.blocks.0, layers_decoder_phase.1.blocks.0.drop_path, layers_decoder_phase.1.blocks.0.mlp, layers_decoder_phase.1.blocks.0.mlp.act, layers_decoder_phase.1.blocks.0.mlp.drop, layers_decoder_phase.1.blocks.0.mlp.fc1, layers_decoder_phase.1.blocks.0.mlp.fc2, layers_decoder_phase.1.blocks.0.norm, layers_decoder_phase.1.blocks.0.norm2, layers_decoder_phase.1.blocks.0.ss2d.act, layers_decoder_phase.1.blocks.0.ss2d.conv2d, layers_decoder_phase.1.blocks.0.ss2d.dt_proj_conv, layers_decoder_phase.1.blocks.0.ss2d.in_proj, layers_decoder_phase.1.blocks.0.ss2d.out_norm, layers_decoder_phase.1.blocks.0.ss2d.out_proj, layers_decoder_phase.1.blocks.0.ss2d.x_proj_conv, layers_decoder_phase.1.sampler, layers_decoder_phase.1.sampler.expand, layers_decoder_phase.1.sampler.norm, layers_decoder_phase.1.skip_handler, layers_decoder_phase.2, layers_decoder_phase.2.blocks, layers_decoder_phase.2.blocks.0, layers_decoder_phase.2.blocks.0.drop_path, layers_decoder_phase.2.blocks.0.mlp, layers_decoder_phase.2.blocks.0.mlp.act, layers_decoder_phase.2.blocks.0.mlp.drop, layers_decoder_phase.2.blocks.0.mlp.fc1, layers_decoder_phase.2.blocks.0.mlp.fc2, layers_decoder_phase.2.blocks.0.norm, layers_decoder_phase.2.blocks.0.norm2, layers_decoder_phase.2.blocks.0.ss2d.act, layers_decoder_phase.2.blocks.0.ss2d.conv2d, layers_decoder_phase.2.blocks.0.ss2d.dt_proj_conv, layers_decoder_phase.2.blocks.0.ss2d.in_proj, layers_decoder_phase.2.blocks.0.ss2d.out_norm, layers_decoder_phase.2.blocks.0.ss2d.out_proj, layers_decoder_phase.2.blocks.0.ss2d.x_proj_conv, layers_decoder_phase.2.sampler, layers_decoder_phase.2.sampler.expand, layers_decoder_phase.2.sampler.norm, layers_decoder_phase.2.skip_handler, layers_decoder_phase.3, layers_decoder_phase.3.blocks, layers_decoder_phase.3.blocks.0, layers_decoder_phase.3.blocks.0.drop_path, layers_decoder_phase.3.blocks.0.mlp, layers_decoder_phase.3.blocks.0.mlp.act, layers_decoder_phase.3.blocks.0.mlp.drop, layers_decoder_phase.3.blocks.0.mlp.fc1, layers_decoder_phase.3.blocks.0.mlp.fc2, layers_decoder_phase.3.blocks.0.norm, layers_decoder_phase.3.blocks.0.norm2, layers_decoder_phase.3.blocks.0.ss2d.act, layers_decoder_phase.3.blocks.0.ss2d.conv2d, layers_decoder_phase.3.blocks.0.ss2d.dt_proj_conv, layers_decoder_phase.3.blocks.0.ss2d.in_proj, layers_decoder_phase.3.blocks.0.ss2d.out_norm, layers_decoder_phase.3.blocks.0.ss2d.out_proj, layers_decoder_phase.3.blocks.0.ss2d.x_proj_conv, layers_decoder_phase.3.sampler, layers_decoder_phase.3.sampler.expand, layers_decoder_phase.3.sampler.norm, layers_decoder_phase.3.skip_handler, layers_encoder_mag.0.blocks.0.drop_path, layers_encoder_mag.1.blocks.0.drop_path, layers_encoder_mag.2.blocks.0.drop_path, layers_encoder_mag.3.blocks.0.drop_path, layers_encoder_phase.0.blocks.0.drop_path, layers_encoder_phase.1.blocks.0.drop_path, layers_encoder_phase.2.blocks.0.drop_path, layers_encoder_phase.3.blocks.0.drop_path, output_layer_mag.0.blocks.0.drop_path, output_layer_mag.1.blocks.0.drop_path, output_layer_mag.3.blocks.0.drop_path, output_layer_phase.0.blocks.0.drop_path, output_layer_phase.1.blocks.0.drop_path, output_layer_phase.3.blocks.0.drop_path
+[32m[2026-02-02 22:48:42 Pytorch_CUDA_mix_BCHW_0][0m[33m(trainer.py 67)[0m: INFO Model summary: ====================================================================================================
+Layer (type:depth-idx)                             Output Shape              Param #
+====================================================================================================
+DualStreamInteractiveMambaUNet                     [1, 1, 122640]            --
+├─Sequential: 1-1                                  [1, 16, 128, 128]         --
+│    └─Conv2d: 2-1                                 [1, 8, 256, 256]          80
+│    └─Identity: 2-2                               [1, 8, 256, 256]          --
+│    └─LayerNorm2d: 2-3                            [1, 8, 256, 256]          16
+│    └─Identity: 2-4                               [1, 8, 256, 256]          --
+│    └─GELU: 2-5                                   [1, 8, 256, 256]          --
+│    └─Conv2d: 2-6                                 [1, 16, 128, 128]         1,168
+│    └─Identity: 2-7                               [1, 16, 128, 128]         --
+│    └─LayerNorm2d: 2-8                            [1, 16, 128, 128]         32
+├─Sequential: 1-2                                  [1, 16, 128, 128]         --
+│    └─Conv2d: 2-9                                 [1, 8, 256, 256]          80
+│    └─Identity: 2-10                              [1, 8, 256, 256]          --
+│    └─LayerNorm2d: 2-11                           [1, 8, 256, 256]          16
+│    └─Identity: 2-12                              [1, 8, 256, 256]          --
+│    └─GELU: 2-13                                  [1, 8, 256, 256]          --
+│    └─Conv2d: 2-14                                [1, 16, 128, 128]         1,168
+│    └─Identity: 2-15                              [1, 16, 128, 128]         --
+│    └─LayerNorm2d: 2-16                           [1, 16, 128, 128]         32
+├─ModuleList: 1-9                                  --                        (recursive)
+│    └─Sequential: 2-17                            [1, 32, 64, 64]           --
+│    │    └─Sequential: 3-1                        [1, 32, 64, 64]           1,574
+├─ModuleList: 1-10                                 --                        (recursive)
+│    └─Sequential: 2-18                            [1, 32, 64, 64]           --
+│    │    └─Sequential: 3-2                        [1, 32, 64, 64]           1,574
+├─ModuleList: 1-9                                  --                        (recursive)
+│    └─Sequential: 2-19                            [1, 64, 32, 32]           --
+│    │    └─Sequential: 3-3                        [1, 64, 32, 32]           5,720
+├─ModuleList: 1-10                                 --                        (recursive)
+│    └─Sequential: 2-20                            [1, 64, 32, 32]           --
+│    │    └─Sequential: 3-4                        [1, 64, 32, 32]           5,720
+├─ModuleList: 1-9                                  --                        (recursive)
+│    └─Sequential: 2-21                            [1, 128, 16, 16]          --
+│    │    └─Sequential: 3-5                        [1, 128, 16, 16]          21,728
+├─ModuleList: 1-10                                 --                        (recursive)
+│    └─Sequential: 2-22                            [1, 128, 16, 16]          --
+│    │    └─Sequential: 3-6                        [1, 128, 16, 16]          21,728
+├─ModuleList: 1-9                                  --                        (recursive)
+│    └─Sequential: 2-23                            [1, 128, 16, 16]          --
+│    │    └─Sequential: 3-7                        [1, 128, 16, 16]          34,560
+├─ModuleList: 1-10                                 --                        (recursive)
+│    └─Sequential: 2-24                            [1, 128, 16, 16]          --
+│    │    └─Sequential: 3-8                        [1, 128, 16, 16]          34,560
+├─ModuleList: 1-13                                 --                        (recursive)
+│    └─Sequential: 2-25                            [1, 128, 16, 16]          --
+│    │    └─Identity: 3-9                          [1, 128, 16, 16]          --
+│    │    └─Sequential: 3-10                       [1, 128, 16, 16]          --
+│    │    └─Identity: 3-11                         [1, 128, 16, 16]          --
+├─ModuleList: 1-12                                 --                        135,072
+│    └─Sequential: 2-26                            [1, 128, 16, 16]          --
+│    │    └─Identity: 3-12                         [1, 128, 16, 16]          --
+│    │    └─Sequential: 3-13                       [1, 128, 16, 16]          --
+│    │    └─Identity: 3-14                         [1, 128, 16, 16]          --
+├─ModuleList: 1-13                                 --                        (recursive)
+│    └─Sequential: 2-27                            [1, 64, 32, 32]           --
+│    │    └─Conv2d: 3-15                           [1, 128, 16, 16]          32,896
+│    │    └─Sequential: 3-16                       [1, 128, 16, 16]          36,352
+│    │    └─PatchExpanding: 3-17                   [1, 64, 32, 32]           32,896
+│    └─Sequential: 2-28                            [1, 64, 32, 32]           (recursive)
+│    │    └─Conv2d: 3-18                           [1, 128, 16, 16]          (recursive)
+│    │    └─Sequential: 3-19                       [1, 128, 16, 16]          (recursive)
+│    │    └─PatchExpanding: 3-20                   [1, 64, 32, 32]           (recursive)
+│    └─Sequential: 2-29                            [1, 32, 64, 64]           --
+│    │    └─Conv2d: 3-21                           [1, 64, 32, 32]           8,256
+│    │    └─Sequential: 3-22                       [1, 64, 32, 32]           9,600
+│    │    └─PatchExpanding: 3-23                   [1, 32, 64, 64]           8,256
+│    └─Sequential: 2-30                            [1, 32, 64, 64]           (recursive)
+│    │    └─Conv2d: 3-24                           [1, 64, 32, 32]           (recursive)
+│    │    └─Sequential: 3-25                       [1, 64, 32, 32]           (recursive)
+│    │    └─PatchExpanding: 3-26                   [1, 32, 64, 64]           (recursive)
+│    └─Sequential: 2-31                            [1, 16, 128, 128]         --
+│    │    └─Conv2d: 3-27                           [1, 32, 64, 64]           2,080
+│    │    └─Sequential: 3-28                       [1, 32, 64, 64]           2,656
+│    │    └─PatchExpanding: 3-29                   [1, 16, 128, 128]         2,080
+│    └─Sequential: 2-32                            [1, 16, 128, 128]         (recursive)
+│    │    └─Conv2d: 3-30                           [1, 32, 64, 64]           (recursive)
+│    │    └─Sequential: 3-31                       [1, 32, 64, 64]           (recursive)
+│    │    └─PatchExpanding: 3-32                   [1, 16, 128, 128]         (recursive)
+├─Sequential: 1-14                                 [1, 1, 512, 512]          --
+│    └─Sequential: 2-33                            [1, 8, 256, 256]          --
+│    │    └─Conv2d: 3-33                           [1, 16, 128, 128]         528
+│    │    └─Sequential: 3-34                       [1, 16, 128, 128]         1,488
+│    │    └─PatchExpanding: 3-35                   [1, 8, 256, 256]          528
+│    └─Sequential: 2-34                            [1, 4, 512, 512]          --
+│    │    └─Identity: 3-36                         [1, 8, 256, 256]          --
+│    │    └─Sequential: 3-37                       [1, 8, 256, 256]          496
+│    │    └─PatchExpanding: 3-38                   [1, 4, 512, 512]          136
+│    └─Conv2d: 2-35                                [1, 1, 512, 512]          5
+│    └─Sequential: 2-36                            [1, 1, 512, 512]          --
+│    │    └─Identity: 3-39                         [1, 1, 512, 512]          --
+│    │    └─Sequential: 3-40                       [1, 1, 512, 512]          93
+│    │    └─Identity: 3-41                         [1, 1, 512, 512]          --
+├─Sequential: 1-15                                 [1, 1, 512, 512]          --
+│    └─Sequential: 2-37                            [1, 8, 256, 256]          --
+│    │    └─Conv2d: 3-42                           [1, 16, 128, 128]         528
+│    │    └─Sequential: 3-43                       [1, 16, 128, 128]         1,488
+│    │    └─PatchExpanding: 3-44                   [1, 8, 256, 256]          528
+│    └─Sequential: 2-38                            [1, 4, 512, 512]          --
+│    │    └─Identity: 3-45                         [1, 8, 256, 256]          --
+│    │    └─Sequential: 3-46                       [1, 8, 256, 256]          496
+│    │    └─PatchExpanding: 3-47                   [1, 4, 512, 512]          136
+│    └─Conv2d: 2-39                                [1, 1, 512, 512]          5
+│    └─Sequential: 2-40                            [1, 1, 512, 512]          --
+│    │    └─Identity: 3-48                         [1, 1, 512, 512]          --
+│    │    └─Sequential: 3-49                       [1, 1, 512, 512]          93
+│    │    └─Identity: 3-50                         [1, 1, 512, 512]          --
+====================================================================================================
+Total params: 406,448
+Trainable params: 404,656
+Non-trainable params: 1,792
+Total mult-adds (M): 474.33
+====================================================================================================
+Input size (MB): 0.49
+Forward/backward pass size (MB): 888.80
+Params size (MB): 1.08
+Estimated Total Size (MB): 890.37
+====================================================================================================
+params 0.41M, GFLOPs 1.00
+Unsupported operator aten::clone encountered 120 time(s)
+Unsupported operator aten::mv encountered 60 time(s)
+Unsupported operator aten::vdot encountered 60 time(s)
+Unsupported operator aten::div encountered 60 time(s)
+Unsupported operator aten::rsub encountered 2 time(s)
+Unsupported operator aten::pad encountered 2 time(s)
+Unsupported operator aten::add encountered 2 time(s)
+
+[32m[2026-02-02 22:48:44 Pytorch_CUDA_mix_BCHW_0][0m[33m(trainer.py 67)[0m: INFO Model summary: ==============================================================================================================
+Layer (type:depth-idx)                                       Output Shape              Param #
+==============================================================================================================
+MultiPeriodDiscriminator                                     [1, 1516]                 --
+├─ModuleList: 1-1                                            --                        --
+│    └─PeriodDiscriminator: 2-1                              [1, 1516]                 --
+│    │    └─ModuleList: 3-3                                  --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-2                          [1, 1, 758, 2]            3,073
+│    └─PeriodDiscriminator: 2-2                              [1, 1516]                 (recursive)
+│    │    └─ModuleList: 3-3                                  --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-4                          [1, 1, 758, 2]            (recursive)
+│    └─PeriodDiscriminator: 2-3                              [1, 1515]                 --
+│    │    └─ModuleList: 3-7                                  --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-6                          [1, 1, 505, 3]            3,073
+│    └─PeriodDiscriminator: 2-4                              [1, 1515]                 (recursive)
+│    │    └─ModuleList: 3-7                                  --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-8                          [1, 1, 505, 3]            (recursive)
+│    └─PeriodDiscriminator: 2-5                              [1, 1515]                 --
+│    │    └─ModuleList: 3-11                                 --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-10                         [1, 1, 303, 5]            3,073
+│    └─PeriodDiscriminator: 2-6                              [1, 1515]                 (recursive)
+│    │    └─ModuleList: 3-11                                 --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-12                         [1, 1, 303, 5]            (recursive)
+│    └─PeriodDiscriminator: 2-7                              [1, 1519]                 --
+│    │    └─ModuleList: 3-15                                 --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-14                         [1, 1, 217, 7]            3,073
+│    └─PeriodDiscriminator: 2-8                              [1, 1519]                 (recursive)
+│    │    └─ModuleList: 3-15                                 --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-16                         [1, 1, 217, 7]            (recursive)
+│    └─PeriodDiscriminator: 2-9                              [1, 1518]                 --
+│    │    └─ModuleList: 3-19                                 --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-18                         [1, 1, 138, 11]           3,073
+│    └─PeriodDiscriminator: 2-10                             [1, 1518]                 (recursive)
+│    │    └─ModuleList: 3-19                                 --                        (recursive)
+│    │    └─ParametrizedConv2d: 3-20                         [1, 1, 138, 11]           (recursive)
+==============================================================================================================
+Total params: 41,092,165
+Trainable params: 41,092,165
+Non-trainable params: 0
+Total mult-adds (M): 0
+==============================================================================================================
+Input size (MB): 0.98
+Forward/backward pass size (MB): 0.00
+Params size (MB): 0.00
+Estimated Total Size (MB): 0.98
+==============================================================================================================
+params 41.09M, GFLOPs 137.06
+
+[32m[2026-02-02 22:48:44 Pytorch_CUDA_mix_BCHW_0][0m[33m(base_trainer.py 79)[0m: INFO Start training...
+Epoch 1 [TRAIN] [0/36842 (0%)]:   0%|          | 0/4606 [00:14<?, ?batch/s, lsd=0, lsd_hf=0, lsd_lf=0, snr=0, stoi=0, total_loss=0]
+Traceback (most recent call last):
+  File "/F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/main.py", line 368, in <module>
+    main(config)
+  File "/F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/main.py", line 272, in main
+    trainer.train()
+  File "/F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/base/base_trainer.py", line 82, in train
+    self._train_epoch(epoch)
+  File "/F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/trainer/trainer.py", line 163, in _train_epoch
+    self._optimize(total_generator_loss)
+  File "/F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/trainer/trainer.py", line 447, in _optimize
+    loss.backward()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/torch/_tensor.py", line 525, in backward
+    torch.autograd.backward(
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/torch/autograd/__init__.py", line 267, in backward
+    _engine_run_backward(
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/torch/autograd/graph.py", line 744, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

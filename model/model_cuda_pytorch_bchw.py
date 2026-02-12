@@ -882,7 +882,6 @@ class MambaUNet(BaseModel):
                 # =============================
             ),
             # Refine the output
-            # self.VSSLayer(
             self.VSSLayer_PVM(
                 dim=dim // 2,
                 drop_path=self.dpr[-1:],
@@ -924,7 +923,7 @@ class MambaUNet(BaseModel):
                 norm_layer=nn.Identity,
                 sampler=nn.Identity(),
                 channel_first=self.channel_first,
-                concat_skip=False,  # We already handle the skip connection above
+                concat_skip=False,
                 # =================
                 ssm_d_state=ssm_d_state,
                 ssm_ratio=ssm_ratio,

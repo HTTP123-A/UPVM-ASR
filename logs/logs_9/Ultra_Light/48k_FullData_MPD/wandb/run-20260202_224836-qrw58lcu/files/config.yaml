@@ -1,0 +1,364 @@
+_wandb:
+    value:
+        cli_version: 0.22.2
+        e:
+            ovmy23ei6d38uyeai3p20mn9mnloir0u:
+                args:
+                    - --cfg
+                    - configs/upvm_asr_48k_MPD.yaml
+                    - --tag
+                    - 48k_8k_FullData_MPD
+                    - --output
+                    - logs/logs_9/
+                    - --input_sr
+                    - "16000"
+                    - --disable_amp
+                    - --resume
+                    - logs/logs_9/Ultra_Light/48k_FullData_MPD
+                codePath: main.py
+                codePathLocal: main.py
+                cpu_count: 56
+                cpu_count_logical: 112
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "470822240256"
+                        used: "238352564224"
+                email: ngquangph@gmail.com
+                executable: /E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/bin/python3
+                git:
+                    commit: 46ad6bfebdfc2be7bc8cefd6305bdfe597c390b6
+                    remote: https://github.com/HTTP123-A/UPVM-ASR.git
+                gpu: NVIDIA A40
+                gpu_count: 4
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 10752
+                      memoryTotal: "48305799168"
+                      name: NVIDIA A40
+                      uuid: GPU-e140ce89-4fa5-9443-1905-87f98c38325e
+                    - architecture: Ampere
+                      cudaCores: 10752
+                      memoryTotal: "48305799168"
+                      name: NVIDIA A40
+                      uuid: GPU-33ec8564-8293-2f17-b156-1aa192fc8cbf
+                    - architecture: Ampere
+                      cudaCores: 10752
+                      memoryTotal: "48305799168"
+                      name: NVIDIA A40
+                      uuid: GPU-73808917-fcac-abce-24c0-d74f6b662673
+                    - architecture: Ampere
+                      cudaCores: 10752
+                      memoryTotal: "48305799168"
+                      name: NVIDIA A40
+                      uuid: GPU-bfedf9d7-83e0-a425-eb66-099bc9352eb9
+                host: PowerEdge-R760xa
+                memory:
+                    total: "540498427904"
+                os: Linux-6.8.0-90-generic-x86_64-with-glibc2.35
+                program: /F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/main.py
+                python: CPython 3.10.19
+                root: logs/logs_9/Ultra_Light/48k_FullData_MPD
+                startedAt: "2026-02-02T14:48:36.845624Z"
+                writerId: ovmy23ei6d38uyeai3p20mn9mnloir0u
+        m: []
+        python_version: 3.10.19
+        t:
+            "1":
+                - 1
+                - 2
+                - 3
+                - 41
+                - 49
+                - 63
+            "2":
+                - 1
+                - 2
+                - 3
+                - 41
+                - 49
+                - 63
+            "3":
+                - 13
+                - 15
+                - 16
+                - 34
+            "4": 3.10.19
+            "5": 0.22.2
+            "12": 0.22.2
+            "13": linux-x86_64
+AMP_ENABLE:
+    value: false
+BASE:
+    value:
+        - ""
+DATA.BATCH_SIZE:
+    value: 8
+DATA.DATA_PATH:
+    value: data/
+DATA.DATASET:
+    value: VCTK_092
+DATA.FLAC2WAV:
+    value:
+        DST_PATH: VCTK-Corpus-0.92/wav48_silence_trimmed_wav
+        SRC_PATH: data/
+        SRC_SR: 48000
+        TIMESTAMPS: ./vctk-silence-labels/vctk-silences.0.92.txt
+DATA.LPF:
+    value:
+        LPF_TEST:
+            - - cheby1
+              - 6
+        LPF_TRAIN:
+            - - cheby1
+              - 6
+            - - cheby1
+              - 8
+            - - cheby1
+              - 10
+            - - cheby1
+              - 12
+            - - bessel
+              - 6
+            - - bessel
+              - 12
+            - - ellip
+              - 6
+            - - ellip
+              - 12
+        MULTIFILTER: true
+DATA.MIC_ID:
+    value: mic1
+DATA.NUM_WORKERS:
+    value: 1
+DATA.PAD_WHITENOISE:
+    value: 1e-32
+DATA.RANDOM_RESAMPLE:
+    value:
+        - 16000
+DATA.RESAMPLER:
+    value: scipy
+DATA.SEGMENT:
+    value: 2.555
+DATA.SHUFFLE:
+    value: true
+DATA.STFT:
+    value:
+        HOP_LENGTH: 240
+        N_FFT: 1024
+        SCALE: log2
+        WIN_LENGTH: 1024
+DATA.TARGET_SR:
+    value: 48000
+DATA.TRAIN_SPLIT:
+    value:
+        - 100
+        - 8
+DATA.USE_QUANTITY:
+    value: 1
+DATA.VALID_SPLIT:
+    value: 0.1
+DATA.WEIGHTED_SR:
+    value:
+        ENABLE: false
+        RANGES:
+            - - 8000
+              - 16000
+            - - 16000
+              - 24000
+            - - 24000
+              - 48000
+        WEIGHTS:
+            - 0.5
+            - 0.3
+            - 0.2
+DEBUG:
+    value: false
+DEBUG_OUTPUT:
+    value: debug
+EVAL_MODE:
+    value: false
+INFERENCE.OVERLAP:
+    value: 2000
+INFERENCE.RESULTS_DIR:
+    value: results_inference
+INFERENCE_MODE:
+    value: false
+MODEL.DROP_RATE:
+    value: 0
+MODEL.NAME:
+    value: Pytorch_CUDA_mix_BCHW_0
+MODEL.RESUME_PATH:
+    value: logs/logs_9/Ultra_Light/48k_FullData_MPD
+MODEL.TYPE:
+    value: VM_ASR
+MODEL.VSSM:
+    value:
+        CONCAT_SKIP: true
+        DEC_DEPTH_LAYER_INDEX_MIN: 4
+        DEC_MLP_RATIO:
+            - 1
+            - 1
+            - 1
+            - 1
+            - 1
+        DEC_REDUCE_FACTOR:
+            - 8
+            - 8
+            - 8
+            - 8
+            - 8
+        DEPTHS:
+            - 2
+            - 2
+            - 2
+            - 2
+        DIMS: 16
+        DOWNSAMPLE: v1
+        DROP_PATH_RATE: 0.1
+        ENC_DEPTH_LAYER_INDEX: 4
+        ENC_MLP_RATIO:
+            - 1
+            - 1
+            - 1
+            - 1
+        ENC_REDUCE_FACTOR:
+            - 16
+            - 16
+            - 16
+            - 16
+        GMLP: false
+        IN_CHANS: 1
+        INTERACT: dual
+        MLP_ACT_LAYER: relu
+        MLP_DROP_RATE: 0
+        MLP_RATIO: 2
+        NORM_LAYER: ln2d
+        OUTPUT: v3
+        PATCH_NORM: true
+        PATCH_SIZE: 4
+        PATCHEMBED: v2
+        SSM_ACT_LAYER: relu
+        SSM_CONV: 3
+        SSM_CONV_BIAS: true
+        SSM_D_STATE: 1
+        SSM_DROP_RATE: 0
+        SSM_DT_RANK: auto
+        SSM_FORWARDTYPE: v5
+        SSM_INIT: v0
+        SSM_RATIO: 2
+        UPSAMPLE: v1
+MONITOR:
+    value: min lsd
+N_GPU:
+    value: 2
+OUTPUT:
+    value: logs/logs_9/Ultra_Light/48k_FullData_MPD
+PRINT_FREQ:
+    value: 10
+SAVE_EPOCH_FREQ:
+    value: -1
+SEED:
+    value: 123
+TAG:
+    value: 48k_8k_FullData_MPD
+TENSORBOARD.ENABLE:
+    value: true
+TENSORBOARD.LOG_ITEMS:
+    value:
+        - audio
+        - waveform
+        - spectogram
+TEST.OVERLAP:
+    value: 2000
+TEST.RESULTS_DIR:
+    value: results
+TEST.SAVE_RESULT:
+    value: true
+THROUGHPUT_MODE:
+    value: false
+TRAIN.ACCUMULATION_STEPS:
+    value: 1
+TRAIN.ADVERSARIAL:
+    value:
+        DISCRIMINATORS:
+            - mpd
+        ENABLE: true
+        FEATURE_LOSS_LAMBDA: 100
+        GAN_LOSS_TYPE: lsgan
+        GP_LAMBDA: 10
+        MPD_HIDDEN: 32
+        ONLY_ADVERSARIAL_LOSS: false
+        ONLY_FEATURE_LOSS: false
+        STFT_LOSS:
+            EMPHASIZE_HIGH_FREQ: false
+            MAG_FACTOR: 0.5
+            SC_FACTOR: 0.5
+TRAIN.AUTO_RESUME:
+    value: true
+TRAIN.BASE_LR:
+    value: 0.001
+TRAIN.CYCLE_MULT:
+    value: 1
+TRAIN.EARLY_STOPPING:
+    value: 10
+TRAIN.ENABLE_GAN:
+    value: true
+TRAIN.EPOCHS:
+    value: 50
+TRAIN.LOSSES:
+    value:
+        GEN:
+            - multi_resolution_stft
+TRAIN.LOW_FREQ_REPLACEMENT:
+    value: true
+TRAIN.LR_SCHEDULER:
+    value:
+        DECAY_EPOCHS: 30
+        DECAY_RATE: 0.1
+        GAMMA: 0.1
+        MULTISTEPS: []
+        NAME: cosine
+        WARMUP_PREFIX: true
+TRAIN.MAX_LR:
+    value: 0.001
+TRAIN.METRICS:
+    value:
+        - snr
+        - lsd
+        - lsd_hf
+        - lsd_lf
+        - stoi
+TRAIN.MIN_LR:
+    value: 5e-06
+TRAIN.OPTIMIZER:
+    value:
+        BETAS:
+            - 0.9
+            - 0.999
+        EPS: 1e-08
+        MOMENTUM: 0.9
+        NAME: adamw
+TRAIN.START_EPOCH:
+    value: 0
+TRAIN.WARMUP_EPOCHS:
+    value: 5
+TRAIN.WEIGHT_DECAY:
+    value: 0
+WANDB.ENABLE:
+    value: true
+WANDB.ENTITY:
+    value: null
+WANDB.LOG:
+    value: all
+WANDB.MODE:
+    value: online
+WANDB.PROJECT:
+    value: VM_ASR
+WANDB.RESUME:
+    value: true
+WANDB.TAGS:
+    value:
+        - 48k
+        - Data_1.0
+        - MPD

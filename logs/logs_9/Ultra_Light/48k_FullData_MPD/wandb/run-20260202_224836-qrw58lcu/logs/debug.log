@@ -1,0 +1,94 @@
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_setup.py:_flush():81] Current SDK version is 0.22.2
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_setup.py:_flush():81] Configure stats pid to 1479809
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_setup.py:_flush():81] Loading settings from /E/Personal_AI_Model_Training/M11309813/.config/wandb/settings
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_setup.py:_flush():81] Loading settings from /F/AI_Train/M11309813/Personal_AI_Model_Training/myenv/UPVM-ASR/wandb/settings
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_init.py:setup_run_log_directory():705] Logging user logs to logs/logs_9/Ultra_Light/48k_FullData_MPD/wandb/run-20260202_224836-qrw58lcu/logs/debug.log
+2026-02-02 22:48:36,847 INFO    MainThread:1479809 [wandb_init.py:setup_run_log_directory():706] Logging internal logs to logs/logs_9/Ultra_Light/48k_FullData_MPD/wandb/run-20260202_224836-qrw58lcu/logs/debug-internal.log
+2026-02-02 22:48:36,848 INFO    MainThread:1479809 [wandb_init.py:init():832] calling init triggers
+2026-02-02 22:48:36,848 INFO    MainThread:1479809 [wandb_init.py:init():837] wandb.init called with sweep_config: {}
+config: {'BASE': [''], 'DATA.BATCH_SIZE': 8, 'DATA.DATA_PATH': 'data/', 'DATA.DATASET': 'VCTK_092', 'DATA.MIC_ID': 'mic1', 'DATA.RESAMPLER': 'scipy', 'DATA.SHUFFLE': True, 'DATA.NUM_WORKERS': 1, 'DATA.USE_QUANTITY': 1.0, 'DATA.TRAIN_SPLIT': [100, 8], 'DATA.VALID_SPLIT': 0.1, 'DATA.TARGET_SR': 48000, 'DATA.RANDOM_RESAMPLE': [16000], 'DATA.WEIGHTED_SR': CfgNode({'ENABLE': False, 'RANGES': [(8000, 16000), (16000, 24000), (24000, 48000)], 'WEIGHTS': [0.5, 0.3, 0.2]}), 'DATA.SEGMENT': 2.555, 'DATA.PAD_WHITENOISE': 1e-32, 'DATA.STFT': CfgNode({'N_FFT': 1024, 'HOP_LENGTH': 240, 'WIN_LENGTH': 1024, 'SCALE': 'log2'}), 'DATA.LPF': CfgNode({'MULTIFILTER': True, 'LPF_TRAIN': [('cheby1', 6), ('cheby1', 8), ('cheby1', 10), ('cheby1', 12), ('bessel', 6), ('bessel', 12), ('ellip', 6), ('ellip', 12)], 'LPF_TEST': [('cheby1', 6)]}), 'DATA.FLAC2WAV': CfgNode({'SRC_SR': 48000, 'SRC_PATH': 'data/', 'DST_PATH': 'VCTK-Corpus-0.92/wav48_silence_trimmed_wav', 'TIMESTAMPS': './vctk-silence-labels/vctk-silences.0.92.txt'}), 'MODEL.TYPE': 'VM_ASR', 'MODEL.NAME': 'Pytorch_CUDA_mix_BCHW_0', 'MODEL.RESUME_PATH': 'logs/logs_9/Ultra_Light/48k_FullData_MPD', 'MODEL.DROP_RATE': 0.0, 'MODEL.VSSM': CfgNode({'IN_CHANS': 1, 'PATCH_SIZE': 4, 'DEPTHS': [2, 2, 2, 2], 'DIMS': 16, 'SSM_D_STATE': 1, 'SSM_RATIO': 2.0, 'SSM_DT_RANK': 'auto', 'SSM_ACT_LAYER': 'relu', 'SSM_CONV': 3, 'SSM_CONV_BIAS': True, 'SSM_DROP_RATE': 0.0, 'SSM_INIT': 'v0', 'SSM_FORWARDTYPE': 'v5', 'MLP_RATIO': 2.0, 'MLP_ACT_LAYER': 'relu', 'MLP_DROP_RATE': 0.0, 'GMLP': False, 'DROP_PATH_RATE': 0.1, 'PATCH_NORM': True, 'NORM_LAYER': 'ln2d', 'PATCHEMBED': 'v2', 'DOWNSAMPLE': 'v1', 'UPSAMPLE': 'v1', 'OUTPUT': 'v3', 'CONCAT_SKIP': True, 'INTERACT': 'dual', 'ENC_REDUCE_FACTOR': [16, 16, 16, 16], 'ENC_MLP_RATIO': [1.0, 1.0, 1.0, 1.0], 'ENC_DEPTH_LAYER_INDEX': 4, 'DEC_REDUCE_FACTOR': [8, 8, 8, 8, 8], 'DEC_MLP_RATIO': [1.0, 1.0, 1.0, 1.0, 1.0], 'DEC_DEPTH_LAYER_INDEX_MIN': 4}), 'TRAIN.START_EPOCH': 0, 'TRAIN.EPOCHS': 50, 'TRAIN.WARMUP_EPOCHS': 5, 'TRAIN.EARLY_STOPPING': 10, 'TRAIN.WEIGHT_DECAY': 0.0, 'TRAIN.BASE_LR': 0.001, 'TRAIN.MAX_LR': 0.001, 'TRAIN.MIN_LR': 5e-06, 'TRAIN.CYCLE_MULT': 1.0, 'TRAIN.ENABLE_GAN': True, 'TRAIN.LOSSES': CfgNode({'GEN': ['multi_resolution_stft']}), 'TRAIN.METRICS': ['snr', 'lsd', 'lsd_hf', 'lsd_lf', 'stoi'], 'TRAIN.LOW_FREQ_REPLACEMENT': True, 'TRAIN.AUTO_RESUME': True, 'TRAIN.ACCUMULATION_STEPS': 1, 'TRAIN.OPTIMIZER': CfgNode({'NAME': 'adamw', 'EPS': 1e-08, 'BETAS': (0.9, 0.999), 'MOMENTUM': 0.9}), 'TRAIN.LR_SCHEDULER': CfgNode({'NAME': 'cosine', 'DECAY_EPOCHS': 30, 'DECAY_RATE': 0.1, 'WARMUP_PREFIX': True, 'GAMMA': 0.1, 'MULTISTEPS': []}), 'TRAIN.ADVERSARIAL': CfgNode({'ENABLE': True, 'DISCRIMINATORS': ['mpd'], 'STFT_LOSS': CfgNode({'SC_FACTOR': 0.5, 'MAG_FACTOR': 0.5, 'EMPHASIZE_HIGH_FREQ': False}), 'MPD_HIDDEN': 32, 'FEATURE_LOSS_LAMBDA': 100, 'ONLY_FEATURE_LOSS': False, 'ONLY_ADVERSARIAL_LOSS': False, 'GAN_LOSS_TYPE': 'lsgan', 'GP_LAMBDA': 10}), 'TEST.RESULTS_DIR': 'results', 'TEST.OVERLAP': 2000, 'TEST.SAVE_RESULT': True, 'INFERENCE.RESULTS_DIR': 'results_inference', 'INFERENCE.OVERLAP': 2000, 'DEBUG': False, 'DEBUG_OUTPUT': 'debug', 'N_GPU': 2, 'AMP_ENABLE': False, 'OUTPUT': 'logs/logs_9/Ultra_Light/48k_FullData_MPD', 'TAG': '48k_8k_FullData_MPD', 'MONITOR': 'min lsd', 'SAVE_EPOCH_FREQ': -1, 'PRINT_FREQ': 10, 'SEED': 123, 'EVAL_MODE': False, 'THROUGHPUT_MODE': False, 'WANDB.ENABLE': True, 'WANDB.PROJECT': 'VM_ASR', 'WANDB.ENTITY': None, 'WANDB.MODE': 'online', 'WANDB.LOG': 'all', 'WANDB.RESUME': True, 'WANDB.TAGS': ['48k', 'Data_1.0', 'MPD'], 'TENSORBOARD.ENABLE': True, 'TENSORBOARD.LOG_ITEMS': ['audio', 'waveform', 'spectogram'], 'INFERENCE_MODE': False, '_wandb': {}}
+2026-02-02 22:48:36,848 INFO    MainThread:1479809 [wandb_init.py:init():880] starting backend
+2026-02-02 22:48:37,056 INFO    MainThread:1479809 [wandb_init.py:init():883] sending inform_init request
+2026-02-02 22:48:37,061 INFO    MainThread:1479809 [wandb_init.py:init():891] backend started and connected
+2026-02-02 22:48:37,065 INFO    MainThread:1479809 [wandb_init.py:init():961] updated telemetry
+2026-02-02 22:48:37,071 INFO    MainThread:1479809 [wandb_init.py:init():985] communicating run to backend with 90.0 second timeout
+2026-02-02 22:48:38,071 INFO    MainThread:1479809 [wandb_init.py:init():1036] starting run threads in backend
+2026-02-02 22:48:38,222 INFO    MainThread:1479809 [wandb_run.py:_console_start():2509] atexit reg
+2026-02-02 22:48:38,222 INFO    MainThread:1479809 [wandb_run.py:_redirect():2357] redirect: wrap_raw
+2026-02-02 22:48:38,223 INFO    MainThread:1479809 [wandb_run.py:_redirect():2426] Wrapping output streams.
+2026-02-02 22:48:38,223 INFO    MainThread:1479809 [wandb_run.py:_redirect():2449] Redirects installed.
+2026-02-02 22:48:38,225 INFO    MainThread:1479809 [wandb_init.py:init():1076] run started, returning control to user process
+2026-02-02 22:48:38,585 INFO    MainThread:1479809 [wandb_run.py:_tensorboard_callback():1601] tensorboard callback: logs/logs_9/Ultra_Light/48k_FullData_MPD, True
+2026-02-02 22:48:58,387 INFO    wandb-AsyncioManager-main:1479809 [service_client.py:_forward_responses():80] Reached EOF.
+2026-02-02 22:48:58,388 INFO    wandb-AsyncioManager-main:1479809 [mailbox.py:close():137] Closing mailbox, abandoning 1 handles.
+2026-02-02 22:48:58,706 ERROR   MainThread:1479809 [redirect.py:_on_write():664] [all runs] error in stderr callback
+Traceback (most recent call last):
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/redirect.py", line 662, in _on_write
+    cb(written_data)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 2436, in <lambda>
+    lambda data: self._console_raw_callback("stderr", data),
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 399, in wrapper
+    return func(self, *args, **kwargs)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 457, in wrapper_fn
+    return func(self, *args, **kwargs)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 1595, in _console_raw_callback
+    self._backend.interface.publish_output_raw(name, data)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/interface/interface.py", line 802, in publish_output_raw
+    self._publish_output_raw(o)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/interface/interface_shared.py", line 37, in _publish_output_raw
+    self._publish(rec)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/interface/interface_sock.py", line 43, in _publish
+    self._asyncer.run(lambda: self._client.publish(request))
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 136, in run
+    return future.result()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/concurrent/futures/_base.py", line 458, in result
+    return self.__get_result()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/concurrent/futures/_base.py", line 403, in __get_result
+    raise self._exception
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 219, in _wrap
+    return await fn()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 22:48:58,711 ERROR   MainThread:1479809 [redirect.py:_on_write():664] [all runs] error in stderr callback
+Traceback (most recent call last):
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/redirect.py", line 662, in _on_write
+    cb(written_data)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 2436, in <lambda>
+    lambda data: self._console_raw_callback("stderr", data),
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 399, in wrapper
+    return func(self, *args, **kwargs)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 457, in wrapper_fn
+    return func(self, *args, **kwargs)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/wandb_run.py", line 1595, in _console_raw_callback
+    self._backend.interface.publish_output_raw(name, data)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/interface/interface.py", line 802, in publish_output_raw
+    self._publish_output_raw(o)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/interface/interface_shared.py", line 37, in _publish_output_raw
+    self._publish(rec)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/interface/interface_sock.py", line 43, in _publish
+    self._asyncer.run(lambda: self._client.publish(request))
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 136, in run
+    return future.result()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/concurrent/futures/_base.py", line 458, in result
+    return self.__get_result()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/concurrent/futures/_base.py", line 403, in __get_result
+    raise self._exception
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 219, in _wrap
+    return await fn()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/E/Personal_AI_Model_Training/M11309813/anaconda3/envs/test_amb_2/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
